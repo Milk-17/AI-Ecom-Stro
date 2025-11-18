@@ -1,0 +1,277 @@
+const prisma = require("../config/prisma")
+
+exports.listUsers = async (req,res) => {
+    try{
+        //code
+        const users = await prisma.user.findMany({
+            select:{
+                id:true,
+                email:true,
+                role:true,
+                enable:true,
+                address:true
+            }
+        })
+        res.send(users)
+
+    } catch (err) {
+        console.log(err)
+        res.status(500).json({ message: "listUsers Error"})
+    }
+}
+exports.changeStatus = async (req,res) => {
+    try{
+        //code
+        const { id,enable } = req.body
+        console.log(id,enable)
+        const user = await prisma.user.update({
+            where:{ id:Number(id)},
+            data:{ enable: enable }
+        })
+
+
+        res.send('Update Status success')
+
+    } catch (err) {
+        console.log(err)
+        res.status(500).json({ message: "changeStatus Error"})
+    }
+}
+exports.changeRole = async (req,res) => {
+    try{
+        //code
+        const { id,role } = req.body
+   
+        const user = await prisma.user.update({
+            where:{ id:Number(id)},
+            data:{ role: role }
+        })
+        res.send('Updete Role Success')
+
+    } catch (err) {
+        console.log(err)
+        res.status(500).json({ message: "changeRole Error"})
+    }
+}
+exports.userCart = async (req, res) => {
+    try {
+      //code
+      const { cart } = req.body;
+      console.log(cart);
+      console.log(req.user.id);
+  
+      const user = await prisma.user.findFirst({
+        where: { id: Number(req.user.id) },
+      });
+      // console.log(user)
+  
+      // Check quantity
+      for (const item of cart) {
+        // console.log(item)
+        const product = await prisma.product.findUnique({
+          where: { id: item.id },
+          select: { quantity: true, title: true },
+        });
+        // console.log(item)
+        // console.log(product)
+        if (!product || item.count > product.quantity) {
+          return res.status(400).json({
+            ok: false,
+            message: `ขออภัย. สินค้า ${product?.title || "product"} หมด`,
+          });
+        }
+      }
+  
+      // Deleted old Cart item
+      await prisma.productOnCart.deleteMany({
+        where: {
+          cart: {
+            orderedById: user.id,
+          },
+        },
+      });
+      // Deeted old Cart
+      await prisma.cart.deleteMany({
+        where: { orderedById: user.id },
+      });
+  
+      // เตรียมสินค้า
+      let products = cart.map((item) => ({
+        productId: item.id,
+        count: item.count,
+        price: item.price,
+      }));
+  
+      // หาผลรวม
+      let cartTotal = products.reduce(
+        (sum, item) => sum + item.price * item.count,
+        0
+      );
+  
+      // New cart
+      const newCart = await prisma.cart.create({
+        data: {
+          products: {
+            create: products,
+          },
+          cartTotal: cartTotal,
+          orderedById: user.id,
+        },
+      });
+      console.log(newCart);
+      res.send("Add Cart Ok");
+    } catch (err) {
+      console.log(err);
+      res.status(500).json({ message: "Server Error" });
+    }
+  };
+exports.getUserCart = async (req,res) => {
+    try{
+        //code
+        // req.suer.id ผ่าน Middle ทุกๆหน้า ไม่ผ่าน middle จะใช้ตัวแปลไม่ได้
+        const cart  = await prisma.cart.findFirst({
+            where:{
+                orderedById: Number(req.user.id)
+            },
+            include:{
+                products:{
+                    include:{
+                        product:true
+                    }
+                }
+            }
+        })
+        //console.log(cart)
+        res.json({
+            products: cart.products,
+            cartTotal: cart.cartTotal
+        })
+
+    } catch (err) {
+        console.log(err)
+        res.status(500).json({ message: "getUserCart Error"})
+    }
+}
+exports.emptyCart = async (req,res) => {
+    try{
+        //code
+        const cart = await prisma.cart.findFirst({
+            where: { orderedById: Number(req.user.id)}
+        })
+        if(!cart){
+            return res.status(400).json({ message : 'No Cart'})
+        }
+        await prisma.prouctOnCart.deleteMany({
+            where: { cartId: cart.id}
+        })
+        const result = await prisma.cart.deleteMany({
+            where:{ orderedById: Number(req.user.id)}
+        })
+    
+        console.log(result)
+        res.json({
+            message : 'Cart Empty Success',
+            deletedCount: result.count
+        })
+
+    } catch (err) {
+        console.log(err)
+        res.status(500).json({ message: "emptyCart Error"})
+    }
+}
+exports.saveAddress = async (req,res) => {
+    try{
+        //code
+        const { address } = req.body
+        console.log(address)
+        const addressUser = await prisma.user.update({
+            where:{
+                id: Number(req.user.id)
+            },
+            data:{
+                address: address
+            }
+        })
+        res.json({
+            Success : true ,
+            message : "Address Update Success"
+        })
+
+    } catch (err) {
+        console.log(err)
+        res.status(500).json({ message: "saveAddress Error"})
+    }
+}
+exports.saveOrder = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // ดึง cart ของ user จาก DB
+    const cart = await prisma.cart.findFirst({
+      where: { orderedById: userId },
+      include: { products: { include: { product: true } } },
+    });
+
+    if (!cart) {
+      return res.status(400).json({ message: "Cart is empty" });
+    }
+
+    // สร้าง order จาก cart โดยไม่ต้องใช้ paymentIntent
+    const order = await prisma.order.create({
+      data: {
+        orderedById: userId,
+        cartTotal: cart.cartTotal,
+        products: {
+          create: cart.products.map((item) => ({
+            productId: item.productId,
+            count: item.count,
+            price: item.price,
+          })),
+        },
+        orderStatus: "Paid", // สมมติว่า user กดชำระเงินเสร็จ
+        amount: cart.cartTotal,
+        status: "Paid",
+        currentcy: "THB",
+        stripePaymentId: "manual-payment", // แทน Stripe
+      },
+    });
+
+    // เคลียร์ cart
+    await prisma.productOnCart.deleteMany({ where: { cartId: cart.id } });
+    await prisma.cart.delete({ where: { id: cart.id } });
+
+    res.json({ message: "Order placed successfully", order });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: "Order creation failed" });
+  }
+};
+exports.getOrder = async (req,res) => {
+  try{
+      // ดึง orders ของ user และ include product + orderedBy
+      const orders = await prisma.order.findMany({
+          where: {
+              orderedById: Number(req.user.id)
+          },
+          include: {
+              products: {
+                  include: {
+                      product: true
+                  }
+              },
+              orderedBy: true
+          },
+          orderBy: { createdAt: "desc" } // ใหม่สุดอยู่บน
+      });
+
+      if (orders.length === 0){  
+          return res.status(400).json({ success: false , message: 'No orders' });
+      }
+
+      res.json({ success: true, orders });
+
+  } catch (err) {
+      console.log(err);
+      res.status(500).json({ message: "getOrder Error" });
+  }
+}
