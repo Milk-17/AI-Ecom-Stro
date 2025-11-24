@@ -119,18 +119,6 @@ const ProductDetailCard = () => {
           >
             รายละเอียด
           </button>
-          <button
-            className={`px-4 py-2 font-semibold ${activeTab === "spec" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600"}`}
-            onClick={() => setActiveTab("spec")}
-          >
-            สเปค
-          </button>
-          <button
-            className={`px-4 py-2 font-semibold ${activeTab === "reviews" ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-600"}`}
-            onClick={() => setActiveTab("reviews")}
-          >
-            รีวิว
-          </button>
         </div>
 
         {/* Tab Content */}

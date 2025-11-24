@@ -230,17 +230,22 @@ exports.remove = async(req,res) => {
 
 // ===================== SEARCH / FILTER =====================
 const handleQuery = async(req,res,query) => {
-    try{
-        const products = await prisma.product.findMany({
-            where: { title: { contains: query } },
-            include: { category:true, subCategory:true, images:true }
-        });
-        res.send(products);
-    } catch (err){
-        console.log(err);
-        res.status(500).json({ message:"handleQuery Error"});
-    }
-};
+     try{
+    const products = await prisma.product.findMany({
+    where: { 
+                    title: { 
+                        startsWith: query, // <--- แก้จาก contains เป็น startsWith
+                        // mode: 'insensitive' // (ถ้าใช้ PostgreSQL ให้เปิดบรรทัดนี้เพื่อให้ I เท่ากับ i)
+                    } 
+                },
+    include: { category:true, subCategory:true, images:true }
+     });
+     res.send(products);
+     } catch (err){
+     console.log(err);
+     res.status(500).json({ message:"handleQuery Error"});
+     }
+    };
 
 const handlePrice = async(req,res,priceRange) =>{
     try{

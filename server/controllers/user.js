@@ -203,47 +203,82 @@ exports.saveAddress = async (req,res) => {
     }
 }
 exports.saveOrder = async (req, res) => {
+ 
   try {
     const userId = req.user.id;
 
-    // ดึง cart ของ user จาก DB
-    const cart = await prisma.cart.findFirst({
-      where: { orderedById: userId },
-      include: { products: { include: { product: true } } },
-    });
+    // ใช้ Transaction เพื่อความปลอดภัย (เช็คของ -> ตัดของ -> สร้างออเดอร์ -> ลบตะกร้า)
+    // ถ้าขั้นตอนไหนพัง ข้อมูลจะ Rollback กลับมาเหมือนเดิมทั้งหมด
+    const order = await prisma.$transaction(async (tx) => {
+      
+      // 1. ดึงข้อมูลตะกร้า
+      const cart = await tx.cart.findFirst({
+        where: { orderedById: userId },
+        include: { products: { include: { product: true } } },
+      });
 
-    if (!cart) {
-      return res.status(400).json({ message: "Cart is empty" });
-    }
+      if (!cart || cart.products.length === 0) {
+        throw new Error("Cart is empty");
+      }
 
-    // สร้าง order จาก cart โดยไม่ต้องใช้ paymentIntent
-    const order = await prisma.order.create({
-      data: {
-        orderedById: userId,
-        cartTotal: cart.cartTotal,
-        products: {
-          create: cart.products.map((item) => ({
-            productId: item.productId,
-            count: item.count,
-            price: item.price,
-          })),
+      // 2. (สำคัญ) เช็คสต็อก และ ตัดสต็อกสินค้าทีละรายการ
+      for (const item of cart.products) {
+        // 2.1 ดึงสินค้าล่าสุดเพื่อเช็ค quantity
+        const product = await tx.product.findUnique({
+          where: { id: item.productId }
+        });
+
+        // 2.2 เช็คว่ามีของพอไหม
+        if (!product || item.count > product.quantity) {
+          throw new Error(
+            `ขออภัย สินค้า "${product?.title || 'Unknown'}" หมด หรือมีไม่พอ (เหลือ ${product?.quantity || 0} ชิ้น)`
+          );
+        }
+
+        // 2.3 ตัดสต็อก (ลด quantity, เพิ่ม sold)
+        await tx.product.update({
+          where: { id: item.productId },
+          data: {
+            quantity: { decrement: item.count },
+            sold: { increment: item.count }
+          }
+        });
+      }
+
+      // 3. สร้าง Order
+      const newOrder = await tx.order.create({
+        data: {
+          orderedById: userId,
+          cartTotal: cart.cartTotal,
+          products: {
+            create: cart.products.map((item) => ({
+              productId: item.productId,
+              count: item.count,
+              price: item.price,
+            })),
+          },
+          orderStatus: "Not Process", // สถานะจัดส่ง
+          amount: cart.cartTotal,
+          status: "Paid",             // สถานะการเงิน
+          currentcy: "THB",
+          stripePaymentId: "manual-payment", // ใส่ไว้ตามโครงสร้างเดิมของคุณ
         },
-        orderStatus: "Paid", // สมมติว่า user กดชำระเงินเสร็จ
-        amount: cart.cartTotal,
-        status: "Paid",
-        currentcy: "THB",
-        stripePaymentId: "manual-payment", // แทน Stripe
-      },
-    });
+      });
 
-    // เคลียร์ cart
-    await prisma.productOnCart.deleteMany({ where: { cartId: cart.id } });
-    await prisma.cart.delete({ where: { id: cart.id } });
+      // 4. เคลียร์ Cart และ Items ใน Cart
+      await tx.productOnCart.deleteMany({ where: { cartId: cart.id } });
+      await tx.cart.delete({ where: { id: cart.id } });
+
+      return newOrder;
+    });
 
     res.json({ message: "Order placed successfully", order });
+
   } catch (err) {
     console.log(err);
-    res.status(500).json({ message: "Order creation failed" });
+    // ถ้า Error เพราะสินค้าหมด ให้ส่งข้อความแจ้งเตือนกลับไป
+    const message = err.message.includes("ขออภัย") ? err.message : "Order creation failed";
+    res.status(500).json({ message: message });
   }
 };
 exports.getOrder = async (req,res) => {

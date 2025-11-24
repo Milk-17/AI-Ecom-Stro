@@ -22,10 +22,18 @@ const ecomStore = (set, get) => ({
   },
   actionAddtoCart: (product) => {
     const carts = get().carts;
-    const updateCart = [...carts, { ...product, count: 1 }];
-    // Step Uniqe
-    const uniqe = _.unionWith(updateCart, _.isEqual);
-    set({ carts: uniqe });
+    // 1. หาว่ามีสินค้านี้ในตะกร้าหรือยัง? (เช็คจาก ID จะแม่นยำที่สุด)
+    const index = carts.findIndex((item) => item.id === product.id);
+
+    if (index !== -1) {
+      // 2. กรณี "มีของอยู่แล้ว" -> ให้บวกจำนวน (count) เพิ่ม 1
+      const newCarts = [...carts]; // copy array เดิมมา
+      newCarts[index].count += 1;  // บวกจำนวนเพิ่ม
+      set({ carts: newCarts });    // update state
+    } else {
+      // 3. กรณี "ยังไม่มี" -> เพิ่มสินค้าใหม่ต่อท้าย
+      set({ carts: [...carts, { ...product, count: 1 }] });
+    }
   },
   actionUpdateQuantity: (productId, newQuantity) => {
     // console.log('Update Clickkkkk', productId, newQuantity)
