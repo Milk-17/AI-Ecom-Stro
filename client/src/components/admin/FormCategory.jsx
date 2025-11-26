@@ -1,168 +1,189 @@
-import React , { useState , useEffect} from 'react'
-import { createCategory , listCategory , removeCategory, createSubCategory , removeSubCategory } from '../../api/Category'
-import useEcomStore from '../../store/ecom-store'
+import React, { useState, useEffect } from 'react';
+import { 
+  createCategory, 
+  listCategory, 
+  removeCategory,
+  createSubCategory, 
+  removeSubCategory 
+} from '../../api/Category';
+import useEcomStore from '../../store/ecom-store';
 import { toast } from "react-toastify";
-
+// Import Icons (ถ้ายังไม่ได้ลง: npm install lucide-react)
+import { Trash2, Edit2, Plus, Folder, FolderOpen, CornerDownRight, Layers } from 'lucide-react';
 
 const FormCategory = () => {
-  // javascript
   const token = useEcomStore((state) => state.token);
   const [name, setName] = useState('');
-  
-  // categories จะมีหน้าตาแบบนี้: [{ id: 1, name: '...', subCategories: [...] }]
   const categories = useEcomStore((state) => state.categories);
   const getCategory = useEcomStore((state) => state.getCategory);
-  
-  // parentId คือ ID ของ Main Category ที่ถูกเลือกใน dropdown
   const [parentId, setParentId] = useState(''); 
 
   useEffect(() => {
-    getCategory(token); // เรียก listCategory()
-  }, [getCategory, token]); // <--- เพิ่ม dependencies ให้ useEffect
+    getCategory(token);
+  }, [getCategory, token]);
 
-
-  // *** เริ่มต้นการแก้ไข: ปรับ handleSubmit ให้เรียก API ถูกต้อง ***
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     try {
       let res;
       if (parentId) {
-        // --- 1. สร้าง SubCategory ---
-        // (เราตรวจสอบ duplicate check ที่ Backend แล้ว)
         res = await createSubCategory(token, { name, categoryId: parentId });
-        toast.success(`Add SubCategory "${res.data.name}" is created`);
+        toast.success(`สร้างหมวดหมู่ย่อย "${res.data.name}" สำเร็จ`);
       } else {
-        // --- 2. สร้าง Main Category ---
-        // (เราตรวจสอบ duplicate check ที่ Backend แล้ว)
-        res = await createCategory(token, { name }); // Backend ไม่ต้องการ parentId: null
-        toast.success(`Add Category "${res.data.name}" is created`);
+        res = await createCategory(token, { name });
+        toast.success(`สร้างหมวดหมู่หลัก "${res.data.name}" สำเร็จ`);
       }
-      
-      setName(''); // reset input
-      setParentId(''); // reset dropdown
-      getCategory(token); // โหลดข้อมูลใหม่
-
+      setName('');
+      setParentId('');
+      getCategory(token);
     } catch (err) {
       console.log(err);
-      // แสดง Error ที่ส่งมาจาก Backend (ที่เราทำไว้)
-      if (err.response && err.response.data) {
-         toast.error(err.response.data.message);
-      } else {
-         toast.error("An error occurred.");
-      }
+      const msg = err.response?.data?.message || "เกิดข้อผิดพลาด";
+      toast.error(msg);
     }
   };
-  // *** สิ้นสุดการแก้ไข: ปรับ handleSubmit ***
 
-
-  // *** เริ่มต้นการแก้ไข: แยกฟังก์ชันลบ Category และ SubCategory ***
-
-  // ลบ Main Category
   const handleRemoveCategory = async (id, name) => {
-    // ใช้ window.confirm เพื่อยืนยันก่อนลบ
-    if (window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบ ${name}? (หากมีหมวดหมู่ย่อยจะไม่สามารถลบได้)`)) {
+    if (window.confirm(`ยืนยันการลบหมวดหมู่หลัก "${name}"? (ต้องลบหมวดหมู่ย่อยออกก่อน)`)) {
       try {
-        const res = await removeCategory(token, id); // เรียก API ลบแม่
-        toast.success(`Delete Category "${res.data.name}" is deleted`);
+        const res = await removeCategory(token, id);
+        toast.success(`ลบ "${res.data.name}" สำเร็จ`);
         getCategory(token);
       } catch (err) {
-        console.log(err);
-        // ดัก Error ที่เราทำไว้ที่ Backend (เช่น "Cannot delete category with subcategories")
-        if (err.response && err.response.data) {
-          toast.error(err.response.data.message);
-        } else {
-          toast.error("Error deleting category.");
-        }
+        const msg = err.response?.data?.message || "ลบไม่สำเร็จ";
+        toast.error(msg);
       }
     }
   };
 
-  // ลบ SubCategory
   const handleRemoveSubCategory = async (id, name) => {
-    if (window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบ ${name}?`)) {
+    if (window.confirm(`ยืนยันการลบหมวดหมู่ย่อย "${name}"?`)) {
       try {
-        const res = await removeSubCategory(token, id); // เรียก API ลบลูก
-        toast.success(`Delete SubCategory "${res.data.name}" is deleted`);
+        const res = await removeSubCategory(token, id);
+        toast.success(`ลบ "${res.data.name}" สำเร็จ`);
         getCategory(token);
       } catch (err) {
-        console.log(err);
-         if (err.response && err.response.data) {
-          toast.error(err.response.data.message);
-        } else {
-          toast.error("Error deleting subcategory.");
-        }
+        const msg = err.response?.data?.message || "ลบไม่สำเร็จ";
+        toast.error(msg);
       }
     }
   };
-  // *** สิ้นสุดการแก้ไข: แยกฟังก์ชันลบ ***
-
 
   return (
-    <div className='container mx-auto p-4 bg-white shadow-md rounded-md'>
-        <h1>Category Management</h1>
-        <form className='my-4' onSubmit={handleSubmit}>
-            <input
-              value={name} 
-              onChange={(e) => setName(e.target.value)}
-              className='border border-gray-300 p-2 rounded-md mr-2'
-              type='text'
-              placeholder="Category Name" 
-              required // <-- เพิ่ม: บังคับกรอก
-            />
+    <div className="container mx-auto p-6 bg-gray-50 min-h-screen">
+        
+        {/* --- Header Section --- */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-6">
+            <h1 className="text-2xl font-bold text-gray-800 flex items-center gap-3">
+                <Layers className="text-blue-600" size={28} />
+                จัดการหมวดหมู่สินค้า (Category Management)
+            </h1>
+            <p className="text-gray-500 mt-1 ml-10">สร้าง แก้ไข และจัดการโครงสร้างหมวดหมู่สินค้าของร้านค้า</p>
+        </div>
 
-            {/* *** เริ่มต้นการแก้ไข: ปรับ Dropdown ให้ตรงกับโครงสร้างข้อมูล *** */}
-            <select
-              value={parentId}
-              onChange={(e) => setParentId(e.target.value)}
-              className='border border-gray-300 p-2 rounded-md mr-2'
-            >
-              <option value=''>-- สร้างเป็น Main Category --</option>
-              {categories.map(cat => ( // <-- วน Loop categories ได้เลย
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </select>
-            {/* *** สิ้นสุดการแก้ไข: ปรับ Dropdown *** */}
-            
-            <button className='bg-blue-700 text-white p-2 rounded-md '>Add Category</button>
-        </form>
-        <hr /> 
+        {/* --- Form Section --- */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 mb-8">
+            <form onSubmit={handleSubmit} className="flex flex-col md:flex-row gap-4 items-end">
+                
+                {/* Input Name */}
+                <div className="flex-1 w-full">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">ชื่อหมวดหมู่</label>
+                    <input
+                        value={name} 
+                        onChange={(e) => setName(e.target.value)}
+                        className="w-full border border-gray-300 px-4 py-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                        type='text'
+                        placeholder="เช่น เสื้อผ้า, รองเท้า, iPhone..." 
+                        required 
+                    />
+                </div>
 
-        {/* *** เริ่มต้นการแก้ไข: ปรับการแสดงผลให้ตรงกับข้อมูลที่ Backend ส่งมา *** */}
-        <ul className='list-none'>
-          {/* 1. วน Loop Main Category (categories) */}
-          {categories.map(main => (
-            <React.Fragment key={main.id}>
-              {/* แสดง Main Category */}
-              <li className='flex justify-between my-2 p-2 border-b bg-gray-100 font-bold'>
-                <span>{main.name}</span>
-                <button
-                  className='bg-red-600 text-white px-2 py-1 rounded'
-                  onClick={() => handleRemoveCategory(main.id, main.name)} // <-- เรียกใช้ handleRemoveCategory
-                >
-                  Delete
+                {/* Dropdown Parent */}
+                <div className="w-full md:w-1/3">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">หมวดหมู่หลัก (Optional)</label>
+                    <select
+                        value={parentId}
+                        onChange={(e) => setParentId(e.target.value)}
+                        className="w-full border border-gray-300 px-4 py-2.5 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all cursor-pointer bg-white"
+                    >
+                        <option value=''>-- สร้างเป็นหมวดหมู่หลัก --</option>
+                        {categories.map(cat => (
+                            <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
+                    </select>
+                </div>
+                
+                {/* Submit Button */}
+                <button className="w-full md:w-auto bg-blue-600 text-white px-6 py-2.5 rounded-lg hover:bg-blue-700 transition-colors shadow-md flex items-center justify-center gap-2 font-medium">
+                    <Plus size={20} />
+                    <span>เพิ่มหมวดหมู่</span>
                 </button>
-              </li>
-              
-              {/* 2. วน Loop SubCategories ที่อยู่ใน Main Category นั้นๆ */}
-              {main.subCategories.map(sub => ( 
-                <li key={sub.id} className='flex justify-between my-2 ml-6 p-2 border-b text-gray-600'>
-                  <span>- {sub.name}</span>
-                  <button
-                    className='bg-red-500 text-white px-2 py-1 rounded' // <-- อาจใช้สีแดงอ่อนลง
-                    onClick={() => handleRemoveSubCategory(sub.id, sub.name)} // <-- เรียกใช้ handleRemoveSubCategory
-                  >
-                    Delete
-                  </button>
-                </li>
-              ))}
-            </React.Fragment>
-          ))}
-        </ul>
-        {/* *** สิ้นสุดการแก้ไข: ปรับการแสดงผล *** */}
+            </form>
+        </div>
+
+        {/* --- List Section --- */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="bg-gray-100 px-6 py-3 border-b border-gray-200 font-semibold text-gray-700 flex justify-between items-center">
+                <span>โครงสร้างหมวดหมู่ปัจจุบัน</span>
+                <span className="text-xs font-normal text-gray-500 bg-white px-2 py-1 rounded border">
+                    Total: {categories.length} Main Categories
+                </span>
+            </div>
+            
+            <ul className="divide-y divide-gray-100">
+                {categories.map(main => (
+                    <React.Fragment key={main.id}>
+                        {/* Main Category Row */}
+                        <li className="group flex justify-between items-center px-6 py-4 hover:bg-gray-50 transition-colors">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-blue-100 p-2 rounded-md text-blue-600">
+                                    <FolderOpen size={20} />
+                                </div>
+                                <span className="font-semibold text-gray-800 text-lg">{main.name}</span>
+                            </div>
+                            <button
+                                className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-2 rounded-full transition-all opacity-0 group-hover:opacity-100"
+                                onClick={() => handleRemoveCategory(main.id, main.name)}
+                                title="ลบหมวดหมู่หลัก"
+                            >
+                                <Trash2 size={18} />
+                            </button>
+                        </li>
+                        
+                        {/* SubCategory Rows */}
+                        {main.subCategories.length > 0 && (
+                            <div className="bg-slate-50 border-b border-gray-100 pb-2">
+                                {main.subCategories.map(sub => (
+                                    <li key={sub.id} className="flex justify-between items-center pl-16 pr-6 py-2 hover:bg-slate-100 transition-colors relative group/sub">
+                                        <div className="flex items-center gap-2">
+                                            {/* เส้นเชื่อม visual guide */}
+                                            <CornerDownRight size={16} className="text-gray-400" />
+                                            <span className="text-gray-600 font-medium">{sub.name}</span>
+                                        </div>
+                                        <button
+                                            className="text-gray-400 hover:text-red-500 p-1.5 rounded transition-all opacity-0 group-hover/sub:opacity-100"
+                                            onClick={() => handleRemoveSubCategory(sub.id, sub.name)}
+                                            title="ลบหมวดหมู่ย่อย"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </li>
+                                ))}
+                            </div>
+                        )}
+                    </React.Fragment>
+                ))}
+
+                {categories.length === 0 && (
+                    <li className="p-8 text-center text-gray-400">
+                        ยังไม่มีหมวดหมู่สินค้า เริ่มต้นสร้างได้เลย!
+                    </li>
+                )}
+            </ul>
+        </div>
 
     </div>
   )
 }
 
-export default FormCategory
+export default FormCategory;

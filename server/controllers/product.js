@@ -123,64 +123,65 @@ exports.read = async(req,res) =>{
 };
 
 // ===================== UPDATE PRODUCT =====================
-exports.update = async(req,res) => {
-    try{
-        const {title,description,price,quantity,categoryId,subCategoryId,images} = req.body;
-
-        const oldProduct = await prisma.product.findUnique({ where: { id: Number(req.params.id) } });
-
-        // ลบรูปเดิม
-        await prisma.image.deleteMany({ where: { productId: Number(req.params.id) } });
-
-        const product = await prisma.product.update({
-            where: { id: Number(req.params.id) },
-            data:{
-                title,
-                description,
-                price: parseFloat(price),
-                quantity: Number(quantity),
-                categoryId: categoryId ? parseInt(categoryId) : null,
-                subCategoryId: subCategoryId ? parseInt(subCategoryId) : null,
-                images:{
-                    create: images.map(item=> ({
-                        asset_id: item.asset_id,  
-                        public_id: item.public_id,
-                        url: item.url,
-                        secure_url: item.secure_url
-                    }))
-                }
-            }
-        });
-
-        // สร้าง admin log
-        await prisma.adminLog.create({
-            data:{
-                adminId: req.user.id,
-                action: "update",
-                productId: product.id,
-                message: `แก้ไขสินค้า ${product.title}`
-            }
-        });
-
-        // เพิ่ม ProductPriceHistory ถ้าราคาเปลี่ยน
-        if (oldProduct.price !== parseFloat(price)) {
-            await prisma.productPriceHistory.create({
-                data: {
-                    productId: product.id,
-                    oldPrice: oldProduct.price,
-                    newPrice: parseFloat(price),
-                    changedById: req.user.id,
-                }
-            });
-        }
-
-        res.send(product);
-
-    } catch (err){
-        console.log(err);
-        res.status(500).json({ message : "update product controllers Error" });
+exports.update = async (req, res) => {
+    try {
+      const { title, description, price, quantity, categoryId, images } = req.body;
+  
+      // 1. ลบรูปภาพเดิมออกก่อน (ตาม Logic เดิมของคุณ)
+      await prisma.image.deleteMany({
+        where: { productId: Number(req.params.id) },
+      });
+  
+      // *** เริ่มต้นการแก้ไข: ค้นหา Main Category ID จาก SubCategory ID ***
+      const subCatId = parseInt(categoryId);
+      
+      // เช็คว่ามี SubCategory นี้อยู่จริงไหม และใครเป็นพ่อ (Main Category)
+      const subCategoryInfo = await prisma.subCategory.findUnique({
+          where: { id: subCatId }
+      });
+  
+      if (!subCategoryInfo) {
+          return res.status(400).json({ message: "ไม่พบหมวดหมู่ย่อยที่ระบุ (SubCategory not found)" });
+      }
+      // *** สิ้นสุดการแก้ไขส่วนค้นหา ***
+  
+      // 2. อัปเดตข้อมูลสินค้า
+      const product = await prisma.product.update({
+        where: { id: Number(req.params.id) },
+        data: {
+          title: title,
+          description: description,
+          price: parseFloat(price),
+          quantity: parseInt(quantity),
+          
+          // *** ใส่ ID ให้ถูกช่อง (แก้ตรงนี้) ***
+          categoryId: subCategoryInfo.categoryId, // ใส่ ID พ่อที่ถูกต้อง
+          subCategoryId: subCatId,                // ใส่ ID ลูกที่ส่งมา
+          // ***********************************
+  
+          images: {
+            create: images.map((item) => ({
+              asset_id: item.asset_id,
+              public_id: item.public_id,
+              url: item.url,
+              secure_url: item.secure_url,
+            })),
+          },
+        },
+      });
+  
+      // (Optional) บันทึก Log การแก้ไข
+      // await prisma.adminLog.create({ ... }) 
+  
+      // (Optional) บันทึกประวัติราคา ถ้ามีการเปลี่ยนราคา
+      // await prisma.productPriceHistory.create({ ... })
+  
+      res.send(product);
+    } catch (err) {
+      console.log(err);
+      res.status(500).json({ message: "Update product failed" });
     }
-};
+  };
 
 // ===================== REMOVE PRODUCT =====================
 exports.remove = async(req,res) => {

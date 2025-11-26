@@ -3,15 +3,14 @@ import axios from "axios";
 // http://localhost:5001/api/admin/orders
 
 export const getOrdersAdmin = async (token) => {
-  // code body
   return axios.get("http://localhost:5001/api/admin/orders", {
     headers: {
       Authorization: `Bearer ${token}`,
     },
   });
 };
+
 export const changeOrderStatus = async (token, orderId, orderStatus) => {
-  // code body
   return axios.put(
     "http://localhost:5001/api/admin/order-status",
     {
@@ -26,9 +25,7 @@ export const changeOrderStatus = async (token, orderId, orderStatus) => {
   );
 };
 
-
 export const getListAllUsers = async (token) => {
-  // code body
   return axios.get("http://localhost:5001/api/users", {
     headers: {
       Authorization: `Bearer ${token}`,
@@ -36,18 +33,25 @@ export const getListAllUsers = async (token) => {
   });
 };
 
-export const changeUserStatus = async (token,value) => {
-  // code body
-  return axios.post("http://localhost:5001/api/change-status",value, {
+export const changeUserStatus = async (token, value) => {
+  return axios.post("http://localhost:5001/api/change-status", value, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
   });
 };
 
-export const changeUserRole = async (token,value) => {
-  // code body
-  return axios.post("http://localhost:5001/api/change-role",value, {
+export const changeUserRole = async (token, value) => {
+  return axios.post("http://localhost:5001/api/change-role", value, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+};
+
+
+export const getOrderAdminStats = async (token) => {
+  return await axios.get("http://localhost:5001/api/admin/order-stats", {
     headers: {
       Authorization: `Bearer ${token}`,
     },

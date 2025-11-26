@@ -7,7 +7,7 @@ const Home = () => {
   return (
     <div className="p-6 space-y-10">
       {/* Banner */}
-      <ContentCarousel />
+      <ContentCarousel rousel />
 
       {/* Best Seller Section */}
       <section>

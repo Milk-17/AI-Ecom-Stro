@@ -1,11 +1,11 @@
-// rafce
 import React, { useEffect, useState } from "react";
 import useEcomStore from "../../store/ecom-store";
 import { createProduct, deleteProduct } from "../../api/product";
 import { toast } from "react-toastify";
 import Uploadfile from "./Uploadfile";
 import { Link } from "react-router-dom";
-import { PencilOff, Delete } from "lucide-react";
+import { PencilOff, Delete, Box } from "lucide-react"; // เพิ่ม Icon
+import { numberFormat } from '../../utils/number';
 
 const initialState = {
   title: "",
@@ -16,9 +16,7 @@ const initialState = {
   images: [],
 };
 
-// *** เริ่มต้นการแก้ไข: แก้ชื่อ Component (PascalCase) ***
 const FormProduct = () => {
-  // *** สิ้นสุดการแก้ไข: แก้ชื่อ Component ***
   const token = useEcomStore((state) => state.token);
   const categories = useEcomStore((state) => state.categories);
   const getProduct = useEcomStore((state) => state.getProduct);
@@ -26,25 +24,19 @@ const FormProduct = () => {
   const getCategory = useEcomStore((state) => state.getCategory);
 
   const [form, setForm] = useState(initialState);
-  const [selectedMainId, setSelectedMainId] = useState(""); // สำหรับ Main Category
+  const [selectedMainId, setSelectedMainId] = useState(""); 
 
   useEffect(() => {
-    // *** เริ่มต้นการแก้ไข: ส่ง token ถ้า getCategory ใน store ต้องการ ***
-    // (ไฟล์ admin ก่อนหน้านี้คุณมีการส่ง token ใน getCategory)
     getCategory(token);
-    // *** สิ้นสุดการแก้ไข ***
     getProduct(100);
-  }, [getCategory, getProduct, token]); // <-- เพิ่ม dependencies
+  }, [getCategory, getProduct, token]);
 
   const handleOnChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // *** เริ่มต้นการแก้ไข: แก้ไขชื่อฟังก์ชัน (handleSubmit) ***
   const handleSubmit = async (e) => {
-    // *** สิ้นสุดการแก้ไข: แก้ไขชื่อฟังก์ชัน ***
     e.preventDefault();
-    // ตรวจสอบว่าเลือก SubCategory แล้ว
     if (!form.categoryId) {
       toast.error("กรุณาเลือก SubCategory");
       return;
@@ -75,170 +67,229 @@ const FormProduct = () => {
     }
   };
 
-  // *** เริ่มต้นการแก้ไข: ปรับ Logic การดึง SubCategory ให้ตรงกับข้อมูลแบบ Nested ***
-  // 1. หา Main Category ที่ถูกเลือกจากใน Store
   const selectedMainCategory = categories.find(
     (cat) => cat.id === Number(selectedMainId)
   );
-
-  // 2. ดึง Array ของ SubCategories ที่อยู่ข้างใน (ถ้ามี)
   const subCategories = selectedMainCategory?.subCategories || [];
-  // *** สิ้นสุดการแก้ไข: ปรับ Logic การดึง SubCategory ***
+
+  const getStockStatus = (quantity) => {
+    if (quantity === 0) {
+      return <span className="text-red-600 font-bold bg-red-100 px-2 py-1 rounded-full text-xs border border-red-200">สินค้าหมด!</span>;
+    } else if (quantity < 8) {
+      return <span className="text-orange-600 font-bold bg-orange-100 px-2 py-1 rounded-full text-xs border border-orange-200">ใกล้หมด! ({quantity})</span>;
+    }
+    return <span className="text-gray-700 font-medium">{quantity}</span>;
+  };
+
+  const formatDate = (dateString) => {
+      return new Date(dateString).toLocaleDateString('th-TH', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+      });
+  }
 
   return (
-    <div className="container mx-auto p-4 bg-white shadow-md rounded-md">
-      {/* *** เริ่มต้นการแก้ไข: แก้ชื่อฟังก์ชันใน form *** */}
-      <form onSubmit={handleSubmit} className="flex flex-col space-y-4">
-        {/* *** สิ้นสุดการแก้ไข: แก้ชื่อฟังก์ชันใน form *** */}
-        <h1>เพิ่มข้อมูลสินค้า</h1>
-        <input
-          className="border border-gray-300 p-2 rounded-md mr-2"
-          onChange={handleOnChange}
-          value={form.title}
-          name="title"
-          placeholder="title"
-        />
+    <div className="container mx-auto p-6 bg-white shadow-lg rounded-lg border border-gray-200">
+      
+      {/* --- FORM SECTION --- */}
+      <form onSubmit={handleSubmit} className="flex flex-col space-y-6 mb-10">
+        <div className="flex items-center gap-2 border-b pb-4">
+            <Box className="text-blue-600" size={28} />
+            <h1 className="text-2xl font-bold text-gray-800">จัดการสินค้า (Product Management)</h1>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">ชื่อสินค้า</label>
+                <input
+                    className="border border-gray-300 p-2.5 rounded-md w-full focus:ring-2 focus:ring-blue-500 outline-none transition"
+                    onChange={handleOnChange}
+                    value={form.title}
+                    name="title"
+                    placeholder="Product Title"
+                    required
+                />
+            </div>
+            <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">รายละเอียด</label>
+                <textarea
+                    className="border border-gray-300 p-2.5 rounded-md w-full h-[46px] resize-none focus:ring-2 focus:ring-blue-500 outline-none overflow-hidden transition"
+                    onChange={handleOnChange}
+                    value={form.description ?? ""}
+                    name="description"
+                    placeholder="Description"
+                />
+            </div>
+        </div>
 
-        <h1>รายละเอียด</h1>
-        <textarea
-          className="border border-gray-300 p-2 rounded-md mr-2 w-full h-48 resize-y"
-          onChange={handleOnChange}
-          value={form.description ?? ""}
-          name="description"
-          placeholder="description"
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">ราคา (บาท)</label>
+                <input
+                    className="border border-gray-300 p-2.5 rounded-md w-full focus:ring-2 focus:ring-blue-500 outline-none transition"
+                    type="number"
+                    onChange={handleOnChange}
+                    value={form.price}
+                    name="price"
+                    placeholder="0.00"
+                    min="0"
+                    required
+                />
+            </div>
+            <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">จำนวน (ชิ้น)</label>
+                <input
+                    className="border border-gray-300 p-2.5 rounded-md w-full focus:ring-2 focus:ring-blue-500 outline-none transition"
+                    type="number"
+                    onChange={handleOnChange}
+                    value={form.quantity}
+                    name="quantity"
+                    placeholder="0"
+                    min="0"
+                    required
+                />
+            </div>
+        </div>
 
-        <h1>ราคา</h1>
-        <input
-          className="border border-gray-300 p-2 rounded-md mr-2"
-          type="number"
-          onChange={handleOnChange}
-          value={form.price}
-          name="price"
-          placeholder="price"
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">หมวดหมู่หลัก</label>
+                <select
+                    className="border border-gray-300 p-2.5 rounded-md w-full focus:ring-2 focus:ring-blue-500 outline-none bg-white cursor-pointer"
+                    value={selectedMainId}
+                    onChange={(e) => {
+                        setSelectedMainId(e.target.value);
+                        setForm({ ...form, categoryId: "" });
+                    }}
+                    required
+                >
+                    <option value="">-- เลือก Main Category --</option>
+                    {categories.map((cat) => (
+                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    ))}
+                </select>
+            </div>
+            <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">หมวดหมู่ย่อย</label>
+                <select
+                    className="border border-gray-300 p-2.5 rounded-md w-full focus:ring-2 focus:ring-blue-500 outline-none bg-white cursor-pointer disabled:bg-gray-100"
+                    value={form.categoryId}
+                    name="categoryId"
+                    onChange={handleOnChange}
+                    disabled={!selectedMainId}
+                    required
+                >
+                    <option value="">-- เลือก SubCategory --</option>
+                    {subCategories.map((sub) => (
+                        <option key={sub.id} value={sub.id}>{sub.name}</option>
+                    ))}
+                </select>
+            </div>
+        </div>
 
-        <h1>จำนวน</h1>
-        <input
-          className="border border-gray-300 p-2 rounded-md mr-2"
-          type="number"
-          onChange={handleOnChange}
-          value={form.quantity}
-          name="quantity"
-          placeholder="quantity"
-        />
+        <div className="border-t pt-4">
+            <Uploadfile form={form} setForm={setForm} />
+        </div>
 
-        {/* *** เริ่มต้นการแก้ไข: ปรับ Main Category Dropdown ให้ตรงข้อมูล Nested *** */}
-        {/* Dropdown เลือก Main Category */}
-        <select
-          className="border p-2 rounded-md mr-2"
-          value={selectedMainId}
-          onChange={(e) => {
-            setSelectedMainId(e.target.value);
-            setForm({ ...form, categoryId: "" }); // Reset SubCategory เมื่อ Main เปลี่ยน
-          }}
-        >
-          <option value="">เลือก Main Category</option>
-          {/* วน Loop categories (ที่เป็น Main) ได้เลย */}
-          {categories.map((cat) => (
-            <option key={cat.id} value={cat.id}>
-              {cat.name}
-            </option>
-          ))}
-        </select>
-        {/* *** สิ้นสุดการแก้ไข: ปรับ Main Category Dropdown *** */}
-
-        {/* Dropdown เลือก SubCategory */}
-        <select
-          className="border p-2 rounded-md mr-2"
-          value={form.categoryId} // <-- ผูกกับ form.categoryId ถูกต้อง
-          name="categoryId"
-          onChange={handleOnChange} // <-- ใช้ handleOnChange ถูกต้อง
-          disabled={!selectedMainId} // <-- ปิดไว้จนกว่าจะเลือก Main ถูกต้อง
-          required // <-- บังคับเลือก ถูกต้อง
-        >
-          <option value="">เลือก SubCategory</option>
-          {/* 'subCategories' ตอนนี้ถูกกรองมาอย่างถูกต้องแล้ว */}
-          {subCategories.map((sub) => (
-            <option key={sub.id} value={sub.id}>
-              {sub.name}
-            </option>
-          ))}
-        </select>
-
-        <hr />
-        {/* Upload File */}
-        <Uploadfile form={form} setForm={setForm} />
-
-        <button className="bg-blue-700 p-2 space-y-2 rounded-md shadow-md hover:scale-100 hover:-translate-y-1 hover:duration-300">
-          เพิ่มสินค้า
+        <button className="bg-blue-600 text-white px-6 py-3 rounded-lg shadow-md hover:bg-blue-700 transition-all duration-200 font-bold w-full md:w-auto self-end flex items-center justify-center gap-2">
+          <Box size={20} /> เพิ่มสินค้าเข้าระบบ
         </button>
+      </form>
 
-        <hr />
-        <br />
-        <table className="table table-striped table-dark w-full">
-          <thead>
-            <tr className="bg-gray-200 border">
-              <th>No.</th>
-              <th>รูปภาพ</th>
-              <th>ชื่อสินค้า</th>
-              <th>รายละเอียด</th>
-              <th>ราคา</th>
-              <th>จำนวน</th>
-              <th>จำนวนที่เหลือ</th>
-              <th>วันที่อัพเดด</th>
-              <th>จัดการ</th>
+      {/* --- TABLE SECTION --- */}
+      <div className="overflow-x-auto rounded-lg border border-gray-200">
+        <table className="w-full text-left border-collapse table-fixed">
+          <thead className="bg-gray-100 text-gray-700 uppercase text-xs font-bold">
+            <tr>
+              <th className="p-4 border-b text-center w-[5%]">No.</th>
+              <th className="p-4 border-b text-center w-[10%]">รูปภาพ</th>
+              <th className="p-4 border-b text-left w-[25%]">ชื่อสินค้า</th>
+              <th className="p-4 border-b text-right w-[10%]">ราคา</th>
+              <th className="p-4 border-b text-center w-[15%]">จำนวน</th>
+              <th className="p-4 border-b text-center w-[10%]">ขายได้</th>
+              <th className="p-4 border-b text-center w-[15%]">อัพเดท</th>
+              <th className="p-4 border-b text-center w-[10%]">จัดการ</th>
             </tr>
           </thead>
-          <tbody>
-            {products.map((item, index) => (
-              <tr key={index}>
-                <th>{index + 1}</th>
-                <td>
-                  {item.images.length > 0 ? (
-                    <img
-                      className="w-24 h-24 rounded-lg shadow-md"
-                      src={item.images[0].url}
-                      alt={item.title}
-                    />
-                  ) : (
-                    <div className="w-24 h-24 bg-gray-600 rounded-md flex items-center justify-center shadow-sm">
-                      NO Image
-                    </div>
-                  )}
-                </td>
-                <td>{item.title}</td>
-                <td>{item.description}</td>
-                <td>{item.price}</td>
-                <td>{item.quantity}</td>
-                <td>{item.sold}</td>
-                <td>{item.updatedAt}</td>
-                <td className="flex gap-4">
-                  {/* แก้ไขสินค้า */}
-                  <Link
-                    to={`/admin/product/${item.id}`}
-                    className="bg-yellow-500 rounded-md p-1 hover:scale-105 hover:-translate-y-1 hover:duration-200 shadow-md"
-                  >
-                    <PencilOff />
-                  </Link>
+          <tbody className="text-sm text-gray-600">
+            {products.map((item, index) => {
+                const isLowStock = item.quantity > 0 && item.quantity < 8;
+                const isOutOfStock = item.quantity === 0;
 
-                  {/* ลบสินค้า */}
-                  <p
-                    className="bg-red-600 rounded-md p-1 shadow-md hover:scale-105 hover:-translate-y-1 hover:duration-200"
-                    onClick={() => handleDelete(item.id)}
-                  >
-                    <Delete />
-                  </p>
-                </td>
-              </tr>
-            ))}
+                return (
+                    <tr 
+                        key={index} 
+                        className={`border-b last:border-0 hover:bg-gray-50 transition duration-150
+                            ${isOutOfStock ? "bg-red-50" : ""} 
+                            ${isLowStock ? "bg-yellow-50" : ""}
+                        `}
+                    >
+                        <td className="p-3 text-center align-middle">{index + 1}</td>
+                        
+                        <td className="p-3 text-center align-middle">
+                            <div className="flex justify-center">
+                                {item.images.length > 0 ? (
+                                    <img
+                                        className="w-12 h-12 rounded-md shadow-sm object-cover border border-gray-200"
+                                        src={item.images[0].url}
+                                        alt={item.title}
+                                    />
+                                ) : (
+                                    <div className="w-12 h-12 bg-gray-200 rounded-md flex items-center justify-center text-xs text-gray-500">No Pic</div>
+                                )}
+                            </div>
+                        </td>
+
+                        <td className="p-3 align-middle">
+                            <div className="font-medium text-gray-800 truncate" title={item.title}>{item.title}</div>
+                            <div className="text-xs text-gray-400 truncate mt-1" title={item.description}>{item.description}</div>
+                        </td>
+
+                        <td className="p-3 text-right align-middle font-mono font-semibold text-gray-700">
+                            {numberFormat(item.price)}
+                        </td>
+                        
+                        <td className="p-3 text-center align-middle">
+                            {getStockStatus(item.quantity)}
+                        </td>
+
+                        <td className="p-3 text-center align-middle font-medium">
+                            {item.sold}
+                        </td>
+
+                        <td className="p-3 text-center align-middle text-xs whitespace-nowrap">
+                            {formatDate(item.updatedAt)}
+                        </td>
+
+                        <td className="p-3 text-center align-middle">
+                            <div className="flex justify-center gap-2">
+                                <Link
+                                    to={`/admin/product/${item.id}`}
+                                    className="bg-yellow-100 text-yellow-600 p-2 rounded-md hover:bg-yellow-200 transition shadow-sm border border-yellow-200"
+                                    title="แก้ไข"
+                                >
+                                    <PencilOff size={16} />
+                                </Link>
+                                <button
+                                    className="bg-red-100 text-red-600 p-2 rounded-md hover:bg-red-200 transition shadow-sm border border-red-200"
+                                    onClick={() => handleDelete(item.id)}
+                                    title="ลบ"
+                                >
+                                    <Delete size={16} />
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                );
+            })}
           </tbody>
         </table>
-      </form>
+      </div>
     </div>
   );
 };
 
-// *** เริ่มต้นการแก้ไข: แก้ชื่อ Component (PascalCase) ***
 export default FormProduct;
-// *** สิ้นสุดการแก้ไข: แก้ชื่อ Component ***

@@ -20,7 +20,7 @@ const Shop = () => {
       </aside>
 
       {/* Product Grid */}
-      <main className="md:w-2/4 flex flex-wrap gap-4 justify-center">
+      <main className="md:w-2/4 grid grid-cols-1 sm:grid-cols-3 gap-4 h-fit">
         {products.map((item, index) => (
           <ProductCard key={index} item={item} />
         ))}

@@ -13,6 +13,9 @@ import { useNavigate } from "react-router-dom";
 export default function CheckoutForm() {
   const token = useEcomStore((state) => state.token);
   const clearCart = useEcomStore((state) => state.clearCart);
+  // *** 1. เพิ่ม: ดึงฟังก์ชัน getProduct มาใช้ ***
+  const getProduct = useEcomStore((state) => state.getProduct); 
+  // *****************************************
 
   const navigate = useNavigate();
 
@@ -47,7 +50,12 @@ export default function CheckoutForm() {
       saveOrder(token, payload)
         .then((res) => {
           console.log(res);
-          clearCart()
+          clearCart();
+
+          // *** 2. เพิ่ม: สั่งโหลดสินค้าใหม่ทันทีหลังสั่งซื้อสำเร็จ ***
+          getProduct(100); // ใส่จำนวนสินค้าที่ต้องการโหลด (เช่น 100)
+          // *************************************************
+
           toast.success("Payment Success!!!");
           navigate("/user/history");
         })

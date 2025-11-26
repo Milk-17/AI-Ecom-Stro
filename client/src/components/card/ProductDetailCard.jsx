@@ -10,6 +10,7 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
 import "swiper/css/navigation";
 import { Navigation } from "swiper/modules";
+import { numberFormat } from "../../utils/number"; // <--- 1. เพิ่ม import ตรงนี้
 
 const ProductDetailCard = () => {
   const { id } = useParams();
@@ -87,10 +88,11 @@ const ProductDetailCard = () => {
             <h1 className="text-3xl font-bold mb-2">{product.title}</h1>
            
             <p className="text-xl font-semibold mb-2">
-              ราคา: <span className="text-green-600">{product.price} บาท</span>
+              {/* <--- 2. แก้ไขตรงนี้ ใส่ numberFormat */}
+              ราคา: <span className="text-green-600">{numberFormat(product.price)} บาท</span>
             </p>
             <p className="text-sm text-gray-500 mb-4">
-              คงเหลือ: {product.quantity - product.sold} ชิ้น
+              คงเหลือ: {product.quantity} ชิ้น
             </p>
           </div>
 
