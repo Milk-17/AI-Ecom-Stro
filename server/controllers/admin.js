@@ -68,3 +68,34 @@ exports.getOrderAdmin = async (req,res) => {
         res.status(500).json({ message: "getOrderAdmin Error"})
     }
 }
+exports.getOrderStats = async (req, res) => {
+  try {
+    // 1. นับจำนวนออเดอร์ทั้งหมด
+    const totalOrders = await prisma.order.count();
+
+    // 2. หาผลรวมยอดขาย (Sum cartTotal)
+    const totalSalesData = await prisma.order.aggregate({
+      _sum: {
+        cartTotal: true
+      }
+    });
+    const totalSales = totalSalesData._sum.cartTotal || 0;
+
+    // 3. นับออเดอร์ที่ "รอจัดส่ง" (Not Process)
+    const pendingOrders = await prisma.order.count({
+      where: {
+        orderStatus: "Not Process"
+      }
+    });
+
+    res.json({
+      totalOrders,
+      totalSales,
+      pendingOrders
+    });
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: "Get Order Stats Error" });
+  }
+};

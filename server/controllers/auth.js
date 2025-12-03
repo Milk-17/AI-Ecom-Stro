@@ -223,3 +223,21 @@ exports.forgotPassword = async (req, res) => {
       res.status(500).json({ message: "Server Error" });
     }
   };
+
+  exports.currentAdmin = async (req, res) => {
+    try {
+      const user = await prisma.user.findFirst({
+        where: { email: req.user.email },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+        },
+      });
+      res.json({ user });
+    } catch (err) {
+      console.log(err);
+      res.status(500).json({ message: "Server Error" });
+    }
+  };

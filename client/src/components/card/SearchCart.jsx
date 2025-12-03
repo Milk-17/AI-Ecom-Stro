@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import useEcomStore from "../../store/ecom-store";
 import Slider from "rc-slider";
 import "rc-slider/assets/index.css";
+import { numberFormat } from "../../utils/number"; // <--- 1. เพิ่ม import
 
 const SearchCart = () => {
   const getProduct = useEcomStore((state) => state.getProduct);
@@ -30,35 +31,34 @@ const SearchCart = () => {
   }, [text]);
 
   // Search by category
-// *** เริ่มต้นการแก้ไข: ปรับปรุง useEffect ของการค้นหา Category ***
-useEffect(() => {
-  let categoryIds = [];
+  useEffect(() => {
+    let categoryIds = [];
 
-  if (subCategorySelected) {
-    // 1. ถ้าเลือก SubCategory: ใช้ ID นั้นเลย (ถูกต้อง)
-    categoryIds = [subCategorySelected];
+    if (subCategorySelected) {
+      // 1. ถ้าเลือก SubCategory: ใช้ ID นั้นเลย
+      categoryIds = [subCategorySelected];
 
-  } else if (mainCategorySelected) {
-    // 2. ถ้าเลือก Main Category (แต่ยังไม่เลือก Sub):
-    // ให้หา Main Category นั้นใน Store
-    const selectedMain = categories.find(
-      (c) => c.id === mainCategorySelected
-    );
+    } else if (mainCategorySelected) {
+      // 2. ถ้าเลือก Main Category (แต่ยังไม่เลือก Sub):
+      // ให้หา Main Category นั้นใน Store
+      const selectedMain = categories.find(
+        (c) => c.id === mainCategorySelected
+      );
 
-    // แล้วดึง ID ของ "SubCategories ลูก" ทั้งหมดของมันออกมา
-    if (selectedMain?.subCategories) {
-      categoryIds = selectedMain.subCategories.map((s) => s.id);
+      // แล้วดึง ID ของ "SubCategories ลูก" ทั้งหมดของมันออกมา
+      if (selectedMain?.subCategories) {
+        categoryIds = selectedMain.subCategories.map((s) => s.id);
+      }
     }
-  }
 
-  // 3. ถ้ามี ID (ไม่ว่าจากข้อ 1 หรือ 2) ให้ส่งไป Filter
-  if (categoryIds.length > 0) {
-    actionSearchFilters({ category: categoryIds });
-  } else {
-    // ถ้าไม่ได้เลือกอะไรเลย ให้ดึงสินค้าทั้งหมด
-    getProduct();
-  }
-}, [mainCategorySelected, subCategorySelected, categories]); // <-- เพิ่ม categories เข้าไปใน dependency
+    // 3. ถ้ามี ID (ไม่ว่าจากข้อ 1 หรือ 2) ให้ส่งไป Filter
+    if (categoryIds.length > 0) {
+      actionSearchFilters({ category: categoryIds });
+    } else {
+      // ถ้าไม่ได้เลือกอะไรเลย ให้ดึงสินค้าทั้งหมด
+      getProduct();
+    }
+  }, [mainCategorySelected, subCategorySelected, categories]);
 
   // Search by price
   useEffect(() => {
@@ -78,20 +78,20 @@ useEffect(() => {
       <input
         type="text"
         placeholder="ค้นหาสินค้า..."
-        className="border rounded-md w-full mb-4 px-2"
+        className="border rounded-md w-full mb-4 px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
         value={text}
         onChange={(e) => setText(e.target.value)}
       />
 
-      <hr />
+      <hr className="mb-4"/>
 
       {/* Search by Category */}
-      <div>
-        <h1>หมวดหมู่สินค้า</h1>
+      <div className="mb-4">
+        <h1 className="font-semibold mb-2">หมวดหมู่สินค้า</h1>
 
         {/* Main Category */}
         <select
-          className="border rounded-md px-2 py-1 w-full mb-2"
+          className="border rounded-md px-2 py-1 w-full mb-2 focus:outline-none focus:ring-1 focus:ring-blue-500"
           value={mainCategorySelected || ""}
           onChange={(e) => {
             const mainId = Number(e.target.value) || null;
@@ -110,7 +110,7 @@ useEffect(() => {
         {/* Sub Category */}
         {mainCategorySelected && (
           <select
-            className="border rounded-md px-2 py-1 w-full"
+            className="border rounded-md px-2 py-1 w-full focus:outline-none focus:ring-1 focus:ring-blue-500"
             value={subCategorySelected || ""}
             onChange={(e) => {
               const subId = Number(e.target.value) || null;
@@ -129,15 +129,16 @@ useEffect(() => {
         )}
       </div>
 
-      <hr />
+      <hr className="mb-4" />
 
       {/* Search by Price */}
       <div>
-        <h1>ค้นหาราคา</h1>
+        <h1 className="font-semibold mb-2">ค้นหาราคา</h1>
         <div>
-          <div className="flex justify-between">
-            <span>Min : {price[0]}</span>
-            <span>Max : {price[1]}</span>
+          <div className="flex justify-between text-sm text-gray-600 mb-2">
+            {/* <--- 2. แก้ไขตรงนี้ ใส่ numberFormat */}
+            <span>Min : {numberFormat(price[0])}</span>
+            <span>Max : {numberFormat(price[1])}</span>
           </div>
           <Slider
             onChange={handlePrice}
@@ -145,6 +146,8 @@ useEffect(() => {
             min={0}
             max={150000}
             defaultValue={[100, 50000]}
+            trackStyle={{ backgroundColor: '#2563eb' }} // ปรับสีเส้น Slider ให้สวยขึ้น
+            handleStyle={{ borderColor: '#2563eb', backgroundColor: '#2563eb' }} // ปรับสีปุ่ม Slider
           />
         </div>
       </div>

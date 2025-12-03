@@ -16,19 +16,21 @@ import Product from "../pages/admin/Product";
 import Manage from "../pages/admin/Manage";
 import LayoutUser from "../layouts/LayoutUser";
 import HomeUser from "../pages/user/HomeUser";
-import ProtectRouteUser from "./ProtectRouteUser";
-import ProtectRouteAdmin from "./ProtectRouteAdmin";
+import ProtectRouteUser from "./ProtectRouteUser"; // ตรวจสอบ path import ให้ถูกต้อง
+import ProtectRouteAdmin from "./ProtectRouteAdmin"; // ตรวจสอบ path import ให้ถูกต้อง
 import EditProduct from "../pages/admin/EditProduct";
 import Payment from "../pages/user/Payment";
 import ManageOrders from '../pages/admin/ManageOrders'
 import ForgotPassword from "../pages/auth/ForgotPassword";
 import ResetPassword from "../pages/auth/ResetPassword";
-import ProductDetail from "../pages/PorductDetail";
-import FormProductPriceHistory from "../pages/admin/ProductPriceHistory"; //  เพิ่มบรรทัดนี้
+import ProductDetail from "../pages/ProductDetail"; // แก้คำผิด PorductDetail -> ProductDetail
+import FormProductPriceHistory from "../pages/admin/ProductPriceHistory";
 
 
 const router = createBrowserRouter([
-  // Opject User Pubplice
+  // ------------------------------------------
+  // 1. Public Routes (เข้าได้ทุกคน / Layout หลัก)
+  // ------------------------------------------
   {
     path: "/",
     element: <Layout />,
@@ -36,40 +38,51 @@ const router = createBrowserRouter([
       { index: true, element: <Home /> },
       { path: "shop", element: <Shop /> },
       { path: "cart", element: <Cart /> },
+      { path: "product/:id", element: <ProductDetail /> },
       
-      { path: "checkout", element: <Checkout /> },
       { path: "login", element: <Login /> },
       { path: "register", element: <Register /> },
-      
-     //เพิ่มหน้า ForgotPassword / ResetPassword
       { path: "forgot-password", element: <ForgotPassword /> },
       { path: "reset-password/:token", element: <ResetPassword /> },
-      { path: "product/:id", element: <ProductDetail /> },
+
+      // *** Checkout ควรต้อง Login ก่อนถึงจะเข้าได้ ***
+      { 
+        path: "checkout", 
+        element: <ProtectRouteUser element={<Checkout />} /> 
+      },
     ],
   },
-  // Admin
+
+  // ------------------------------------------
+  // 2. Admin Routes (เฉพาะ Admin เท่านั้น)
+  // ------------------------------------------
   {
     path: "/admin",
-    element: <ProtectRouteAdmin element={ <LayoutAdmin /> } />,
+    // ใช้ ProtectRouteAdmin ครอบ LayoutAdmin
+    // ถ้าไม่ใช่ Admin จะถูกดีดไปหน้า Login ทันที และไม่แสดง Layout
+    element: <ProtectRouteAdmin element={<LayoutAdmin />} />,
     children: [
       { index: true, element: <Dashboard /> },
       { path: "category", element: <Category /> },
       { path: "product", element: <Product /> },
       { path: "product/:id", element: <EditProduct /> },
       { path: "manage", element: <Manage /> },
-      { path: 'orders', element: <ManageOrders /> },
+      { path: "orders", element: <ManageOrders /> },
       { path: "productpricehistory", element: <FormProductPriceHistory /> },
     ],
   },
+
+  // ------------------------------------------
+  // 3. User Routes (เฉพาะ User ที่ Login แล้ว)
+  // ------------------------------------------
   {
     path: "/user",
-    //element: <LayoutUser />,
-    element: <ProtectRouteUser element = { <LayoutUser />} />,
+    // ใช้ ProtectRouteUser ครอบ LayoutUser
+    element: <ProtectRouteUser element={<LayoutUser />} />,
     children: [
       { index: true, element: <HomeUser /> },
-      { path: 'payment', element: <Payment /> },
+      { path: "payment", element: <Payment /> },
       { path: "history", element: <History /> },
-
     ],
   },
 ]);
