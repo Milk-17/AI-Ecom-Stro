@@ -129,10 +129,10 @@ const TableOrders = () => {
                     onChange={(e) => handleChangeOrderStatus(token, item.id, e.target.value)}
                     className="border border-gray-300 bg-white text-gray-700 text-xs rounded-md p-1.5 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
                   >
-                    <option value="Not Process">Not Process</option>
-                    <option value="Processing">Processing</option>
-                    <option value="Completed">Completed</option>
-                    <option value="Cancelled">Cancelled</option>
+                    <option value="Not Process">ยังไม่ดำเนินการ</option>
+                    <option value="Processing">กำลังดำเดินการ</option>
+                    <option value="Completed">เสร็จสิน</option>
+                    <option value="Cancelled">รายการถุกยกเลิก</option>
                   </select>
                 </td>
               </tr>

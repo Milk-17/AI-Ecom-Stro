@@ -31,7 +31,7 @@ model User {
   resetTokenExpire DateTime? // หมดอายุ
   adminLogs        AdminLog[]
   priceHistories   ProductPriceHistory[] // ความสัมพันธ์กับ ProductPriceHistory
-}
+} 
 
 model Product {
   id          Int              @id @default(autoincrement())

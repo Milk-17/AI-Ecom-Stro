@@ -125,63 +125,79 @@ exports.read = async(req,res) =>{
 // ===================== UPDATE PRODUCT =====================
 exports.update = async (req, res) => {
     try {
-      const { title, description, price, quantity, categoryId, images } = req.body;
-  
-      // 1. ลบรูปภาพเดิมออกก่อน (ตาม Logic เดิมของคุณ)
-      await prisma.image.deleteMany({
-        where: { productId: Number(req.params.id) },
-      });
-  
-      // *** เริ่มต้นการแก้ไข: ค้นหา Main Category ID จาก SubCategory ID ***
-      const subCatId = parseInt(categoryId);
-      
-      // เช็คว่ามี SubCategory นี้อยู่จริงไหม และใครเป็นพ่อ (Main Category)
-      const subCategoryInfo = await prisma.subCategory.findUnique({
-          where: { id: subCatId }
-      });
-  
-      if (!subCategoryInfo) {
-          return res.status(400).json({ message: "ไม่พบหมวดหมู่ย่อยที่ระบุ (SubCategory not found)" });
-      }
-      // *** สิ้นสุดการแก้ไขส่วนค้นหา ***
-  
-      // 2. อัปเดตข้อมูลสินค้า
-      const product = await prisma.product.update({
-        where: { id: Number(req.params.id) },
-        data: {
-          title: title,
-          description: description,
-          price: parseFloat(price),
-          quantity: parseInt(quantity),
-          
-          // *** ใส่ ID ให้ถูกช่อง (แก้ตรงนี้) ***
-          categoryId: subCategoryInfo.categoryId, // ใส่ ID พ่อที่ถูกต้อง
-          subCategoryId: subCatId,                // ใส่ ID ลูกที่ส่งมา
-          // ***********************************
-  
-          images: {
-            create: images.map((item) => ({
-              asset_id: item.asset_id,
-              public_id: item.public_id,
-              url: item.url,
-              secure_url: item.secure_url,
-            })),
-          },
-        },
-      });
-  
-      // (Optional) บันทึก Log การแก้ไข
-      // await prisma.adminLog.create({ ... }) 
-  
-      // (Optional) บันทึกประวัติราคา ถ้ามีการเปลี่ยนราคา
-      // await prisma.productPriceHistory.create({ ... })
-  
-      res.send(product);
+        const { title, description, price, quantity, categoryId, images, properties } = req.body;
+        const productId = Number(req.params.id);
+
+        // 1. ดึงข้อมูลสินค้า "เดิม" มาก่อน (เพื่อเอาราคาเก่ามาเก็บประวัติ)
+        const originalProduct = await prisma.product.findUnique({
+            where: { id: productId }
+        });
+
+        if (!originalProduct) {
+            return res.status(404).json({ message: "Product not found" });
+        }
+
+        // 2. *** Logic บันทึกประวัติราคา (เปิดใช้งานแล้ว) ***
+        const oldPrice = originalProduct.price;
+        const newPrice = parseFloat(price);
+
+        // ถ้ามีการเปลี่ยนแปลงราคา ให้บันทึกลง History
+        if (oldPrice !== newPrice) {
+            await prisma.productPriceHistory.create({
+                data: {
+                    productId: productId,
+                    oldPrice: oldPrice,
+                    newPrice: newPrice,
+                    changedById: req.user.id, // ต้องมี middleware authCheck
+                }
+            });
+            console.log(`✅ Price History Recorded: ${oldPrice} -> ${newPrice}`);
+        }
+        // *************************************************
+
+        // 3. ลบรูปภาพเดิมออก (Logic เดิม)
+        await prisma.image.deleteMany({
+            where: { productId: productId },
+        });
+
+        // 4. ค้นหา Main Category ID (Logic เดิม)
+        const subCatId = parseInt(categoryId);
+        const subCategoryInfo = await prisma.subCategory.findUnique({
+            where: { id: subCatId }
+        });
+
+        if (!subCategoryInfo) {
+            return res.status(400).json({ message: "SubCategory not found" });
+        }
+
+        // 5. อัปเดตข้อมูลสินค้า
+        const product = await prisma.product.update({
+            where: { id: productId },
+            data: {
+                title: title,
+                description: description,
+                price: newPrice,
+                quantity: parseInt(quantity),
+                categoryId: subCategoryInfo.categoryId,
+                subCategoryId: subCatId,
+                properties: properties, // อัปเดต properties ด้วย
+                images: {
+                    create: images.map((item) => ({
+                        asset_id: item.asset_id,
+                        public_id: item.public_id,
+                        url: item.url,
+                        secure_url: item.secure_url,
+                    })),
+                },
+            },
+        });
+
+        res.send(product);
     } catch (err) {
-      console.log(err);
-      res.status(500).json({ message: "Update product failed" });
+        console.log(err);
+        res.status(500).json({ message: "Update product failed" });
     }
-  };
+};
 
 // ===================== REMOVE PRODUCT =====================
 exports.remove = async(req,res) => {
