@@ -1,0 +1,167 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  // output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               Int                   @id @default(autoincrement())
+  email            String                @unique
+  password         String? // connexpassword Google
+  name             String?
+  picture          String?
+  role             String                @default("user")
+  enable           Boolean               @default(true)
+  address          String?
+  orders           Order[]
+  carts            Cart[]
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  resetToken       String? // token hash
+  resetTokenExpire DateTime? // หมดอายุ
+  adminLogs        AdminLog[]
+  priceHistories   ProductPriceHistory[] // ความสัมพันธ์กับ ProductPriceHistory
+}
+
+model Product {
+  id          Int              @id @default(autoincrement())
+  title       String
+  description String           @db.Text
+  price       Float
+  sold        Int              @default(0)
+  quantity    Int
+  orderItems  ProductOnOrder[]
+  cartItems   ProductOnCart[]
+  images      Image[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  // Relation กับ SubCategory
+  subCategory   SubCategory? @relation(fields: [subCategoryId], references: [id])
+  subCategoryId Int?
+
+  // Relation กับ Category (ถ้าต้องการเก็บ Category ด้วย)
+  category   Category? @relation(fields: [categoryId], references: [id])
+  categoryId Int?
+
+  // Admin logs
+  adminLogs AdminLog[] @relation("ProductAdminLogs")
+
+  // Price history
+  priceHistories ProductPriceHistory[]
+}
+
+model ProductPriceHistory {
+  id          Int      @id @default(autoincrement())
+  productId   Int
+  oldPrice    Float
+  newPrice    Float
+  changedById Int
+  changedAt   DateTime @default(now())
+
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  changedBy User    @relation(fields: [changedById], references: [id])
+}
+
+model Order {
+  id          Int              @id @default(autoincrement())
+  products    ProductOnOrder[]
+  cartTotal   Float
+  orderStatus String           @default("Not Process")
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  orderedBy       User?  @relation(fields: [orderedById], references: [id])
+  orderedById     Int
+  stripePaymentId String
+  amount          Int
+  status          String
+  currentcy       String
+}
+
+model ProductOnOrder {
+  id        Int     @id @default(autoincrement())
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId Int
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId   Int
+  count     Int
+  price     Float
+}
+
+// แก้ไข วันที่ 22/9/2568 เรื่อง เพิ่ม parentId,parent,children  ล้างด้วย npx prisma migrate reset และ npx prisma migrate dev --name add_parentId_to_category
+model Category {
+  id        Int       @id @default(autoincrement())
+  name      String
+  products  Product[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  subCategories SubCategory[] // 1 Category มีหลาย SubCategory
+}
+
+model SubCategory {
+  id         Int       @id @default(autoincrement())
+  name       String
+  categoryId Int // FK ไป Category
+  category   Category  @relation(fields: [categoryId], references: [id])
+  products   Product[] // สินค้าเชื่อม SubCategory
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+model Cart {
+  id          Int             @id @default(autoincrement())
+  products    ProductOnCart[]
+  cartTotal   Float
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  orderedBy   User            @relation(fields: [orderedById], references: [id])
+  orderedById Int
+}
+
+model ProductOnCart {
+  id Int @id @default(autoincrement())
+
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  cartId    Int
+  product   Product? @relation(fields: [productId], references: [id])
+  productId Int
+  count     Int
+  price     Float
+}
+
+model Image {
+  id         Int      @id @default(autoincrement())
+  asset_id   String
+  public_id  String
+  url        String
+  secure_url String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  productId Int
+}
+
+model AdminLog {
+  id        Int      @id @default(autoincrement())
+  adminId   Int // FK ไปที่ User
+  action    String // create / update / delete / etc.
+  productId Int? // สินค้าที่เกี่ยวข้อง (optional)
+  message   String? // ข้อความเพิ่มเติม
+  createdAt DateTime @default(now())
+
+  admin   User     @relation(fields: [adminId], references: [id])
+  product Product? @relation("ProductAdminLogs", fields: [productId], references: [id])
+}
