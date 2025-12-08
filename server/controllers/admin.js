@@ -2,7 +2,7 @@ const prisma = require("../config/prisma")
 
 exports.changeOrderStatus = async (req, res) => {
   try {
-    const { orderId, orderStatus } = req.body;
+    const { orderId, orderStatus , trackingNumber } = req.body;
 
     // 1. ดึงออเดอร์เดิมมาดูก่อน (เพื่อเช็คสถานะเก่า)
     const originalOrder = await prisma.order.findUnique({
@@ -15,14 +15,18 @@ exports.changeOrderStatus = async (req, res) => {
        return res.status(400).json({ message: "ออเดอร์นี้ถูกยกเลิกไปแล้ว (คืนสต็อกไปแล้ว)" });
     }
 
-    // 2. อัปเดตสถานะใหม่
+    // 2. อัปเดตสถานะ + เลขพัสดุ (ถ้ามีส่งมา)
     const orderUpdate = await prisma.order.update({
       where: { id: orderId },
-      data: { orderStatus: orderStatus },
+      data: { 
+          orderStatus: orderStatus,
+          // ถ้ามี trackingNumber ส่งมาให้อัปเดตด้วย
+          ...(trackingNumber && { trackingNumber: trackingNumber }) 
+      },
       include: { products: true }
     });
 
-    // 3. Logic คืนของ 
+    // 3. Logic คืนของ ถ้าเปลี่ยนสถานะเป็น 'Cancelled'
     if (orderStatus === 'Cancelled') {
       for (const item of orderUpdate.products) {
         await prisma.product.update({

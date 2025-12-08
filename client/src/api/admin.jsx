@@ -10,12 +10,13 @@ export const getOrdersAdmin = async (token) => {
   });
 };
 
-export const changeOrderStatus = async (token, orderId, orderStatus) => {
+export const changeOrderStatus = async (token, orderId, orderStatus , trackingNumber) => {
   return axios.put(
     "http://localhost:5001/api/admin/order-status",
     {
       orderId,
       orderStatus,
+      trackingNumber,
     },
     {
       headers: {

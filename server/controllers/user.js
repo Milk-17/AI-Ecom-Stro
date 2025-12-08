@@ -260,8 +260,6 @@ exports.saveOrder = async (req, res) => {
           orderStatus: "Not Process", // สถานะจัดส่ง
           amount: cart.cartTotal,
           status: "Paid",             // สถานะการเงิน
-          currentcy: "THB",
-          stripePaymentId: "manual-payment", // ใส่ไว้ตามโครงสร้างเดิมของคุณ
         },
       });
 

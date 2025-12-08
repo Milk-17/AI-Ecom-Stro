@@ -78,15 +78,14 @@ model Order {
   products    ProductOnOrder[]
   cartTotal   Float
   orderStatus String           @default("Not Process")
+  trackingNumber  String?          // เลขพัสดุ
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
   orderedBy       User?  @relation(fields: [orderedById], references: [id])
   orderedById     Int
-  stripePaymentId String
   amount          Int
   status          String
-  currentcy       String
 }
 
 model ProductOnOrder {
