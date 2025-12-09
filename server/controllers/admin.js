@@ -60,7 +60,7 @@ exports.getOrderAdmin = async (req,res) => {
                     select:{
                         id: true,
                         email: true,
-                        address: true
+                        addresses: true
                     }
                 }
             }
@@ -101,5 +101,22 @@ exports.getOrderStats = async (req, res) => {
   } catch (err) {
     console.log(err);
     res.status(500).json({ message: "Get Order Stats Error" });
+  }
+};
+
+exports.getAdminLogs = async (req, res) => {
+  try {
+    const logs = await prisma.adminLog.findMany({
+      include: {
+        admin: {
+            select: { id: true, email: true, name: true } // เลือกเฉพาะข้อมูลที่จำเป็น (Security)
+        }
+      },
+      orderBy: { createdAt: 'desc' } // เรียงจากใหม่ไปเก่า
+    });
+    res.json(logs);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: "Server Error" });
   }
 };

@@ -22,7 +22,7 @@ model User {
   picture          String?
   role             String                @default("user")
   enable           Boolean               @default(true)
-  address          String?
+  addresses Address[]
   orders           Order[]
   carts            Cart[]
   createdAt        DateTime              @default(now())
@@ -32,6 +32,29 @@ model User {
   adminLogs        AdminLog[]
   priceHistories   ProductPriceHistory[] // ความสัมพันธ์กับ ProductPriceHistory
 } 
+
+model Address {
+  id          Int      @id @default(autoincrement()) // 1. รหัสที่อยู่
+  
+  // 2. ข้อมูลที่อยู่ (แนะนำให้แยกย่อยเพื่อความชัดเจน)
+  addrDetail  String   // บ้านเลขที่, หมู่, ซอย, ถนน
+  province    String   // จังหวัด
+  district    String   // อำเภอ/เขต
+  subDistrict String   // ตำบล/แขวง
+  zipcode     String   // รหัสไปรษณีย์
+  
+  // *** 3. สิ่งที่แนะนำให้เพิ่ม ***
+  recipient   String?  // ชื่อผู้รับสินค้า (เผื่อส่งให้คนอื่น)
+  phone       String?  // เบอร์โทรศัพท์ผู้รับ (สำคัญสำหรับขนส่ง)
+  isMain      Boolean  @default(false) // เป็นที่อยู่หลักหรือไม่?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // 4. ID User (เชื่อมโยง)
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
 
 model Product {
   id          Int              @id @default(autoincrement())
@@ -81,6 +104,7 @@ model Order {
   trackingNumber  String?          // เลขพัสดุ
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
+  shippingAddress String?  @db.Text
 
   orderedBy       User?  @relation(fields: [orderedById], references: [id])
   orderedById     Int

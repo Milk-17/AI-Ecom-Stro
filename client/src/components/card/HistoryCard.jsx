@@ -3,7 +3,7 @@ import { getOrders } from "../../api/user";
 import useEcomStore from "../../store/ecom-store";
 import { numberFormat } from "../../utils/number";
 import { toast } from "react-toastify";
-import { Calendar, MapPin, Package, AlertCircle, ShoppingBag, Truck } from "lucide-react"; // เพิ่ม Truck
+import { Calendar, MapPin, Package, AlertCircle, ShoppingBag, Truck } from "lucide-react"; 
 import { Link } from "react-router-dom";
 
 const HistoryCard = () => {
@@ -91,7 +91,7 @@ const HistoryCard = () => {
             >
               {/* Header */}
               <div className="flex flex-col md:flex-row justify-between items-start mb-4 gap-4 pb-4 border-b border-gray-100">
-                <div className="space-y-2">
+                <div className="space-y-2 w-full md:w-3/4">
                   <div className="flex items-center gap-2 text-sm text-gray-500">
                     <Calendar size={16} />
                     <span>วันที่สั่งซื้อ: {formatDate(item.createdAt)}</span>
@@ -105,18 +105,20 @@ const HistoryCard = () => {
                     </div>
                   )}
                   
-                  {item.orderedBy?.address && (
-                    <div className="flex items-start gap-2 text-sm text-gray-600">
-                        <MapPin size={16} className="mt-0.5 flex-shrink-0" />
-                        <span className="line-clamp-1 max-w-xs" title={item.orderedBy.address}>
-                            ที่อยู่จัดส่ง: {item.orderedBy.address}
+                  {/* ✅ แก้ไขตรงนี้: ใช้ item.shippingAddress แทน orderedBy.address */}
+                  {item.shippingAddress && (
+                    <div className="flex items-start gap-2 text-sm text-gray-600 bg-gray-50 p-2 rounded-md mt-1">
+                        <MapPin size={16} className="mt-1 flex-shrink-0 text-gray-500" />
+                        <span className="leading-relaxed">
+                            {/* แสดงที่อยู่ (Snapshot) */}
+                            {item.shippingAddress}
                         </span>
                     </div>
                   )}
                 </div>
 
                 <div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(item.orderStatus)}`}>
+                  <span className={`px-3 py-1 rounded-full text-xs font-bold border whitespace-nowrap ${getStatusColor(item.orderStatus)}`}>
                     {item.orderStatus}
                   </span>
                 </div>

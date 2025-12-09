@@ -1,50 +1,100 @@
-// src/components/admin/RecentOrders.jsx
-// ======= Start Fix: Recent Orders Component =======
 import React, { useEffect, useState } from "react";
-import axios from "axios";
+import useEcomStore from "../../store/ecom-store";
+import { getOrdersAdmin } from "../../api/admin"; // ใช้ API กลาง
+import { numberFormat } from "../../utils/number";
+import { Loader, MapPin } from "lucide-react";
 
 const RecentOrders = () => {
+  const token = useEcomStore((state) => state.token);
   const [orders, setOrders] = useState([]);
-
-  const fetchOrders = async () => {
-    try {
-      const res = await axios.get("http://localhost:5001/api/order/recent");
-      setOrders(res.data);
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     fetchOrders();
-  }, []);
+  }, [token]);
+
+  const fetchOrders = async () => {
+    setLoading(true);
+    try {
+      const res = await getOrdersAdmin(token);
+      
+      // ดึงข้อมูล (รองรับทั้ง Array และ Object)
+      let orderList = [];
+      if (Array.isArray(res.data)) orderList = res.data;
+      else if (res.data && Array.isArray(res.data.orders)) orderList = res.data.orders;
+
+      // ตัดเอาแค่ 5 รายการล่าสุด
+      const recentFive = orderList
+        .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+        .slice(0, 5);
+
+      setOrders(recentFive);
+    } catch (err) {
+      console.error("Error fetching recent orders:", err);
+    } finally {
+        setLoading(false);
+    }
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString("th-TH", {
+        day: "numeric", month: "short", hour: "2-digit", minute: "2-digit"
+    });
+  };
+
+  if (loading) {
+      return <div className="p-4 flex justify-center"><Loader className="animate-spin text-blue-500"/></div>
+  }
 
   return (
-    <div className="bg-white shadow-md rounded-md p-4">
-      <h2 className="text-lg font-bold mb-4">Recent Orders</h2>
-      <table className="min-w-full table-auto border border-gray-300">
-        <thead className="bg-gray-100">
-          <tr>
-            <th className="px-4 py-2 border">Order ID</th>
-            <th className="px-4 py-2 border">Customer</th>
-            <th className="px-4 py-2 border">Total</th>
-            <th className="px-4 py-2 border">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {orders.map((o) => (
-            <tr key={o.id} className="hover:bg-gray-50">
-              <td className="px-4 py-2 border">{o.id}</td>
-              <td className="px-4 py-2 border">{o.orderedBy?.name || o.orderedBy?.email}</td>
-              <td className="px-4 py-2 border">{o.cartTotal.toLocaleString()} ฿</td>
-              <td className="px-4 py-2 border">{o.orderStatus}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="bg-white shadow-sm rounded-xl p-6 border border-gray-100">
+      <h2 className="text-lg font-bold mb-4 text-gray-800">คำสั่งซื้อล่าสุด (Recent Orders)</h2>
+      <div className="overflow-x-auto">
+        <table className="min-w-full text-sm text-left">
+            <thead className="bg-gray-50 text-gray-600 font-medium border-b">
+                <tr>
+                    <th className="px-4 py-3">ลำดับ</th>
+                    <th className="px-4 py-3">ลูกค้า</th>
+                    <th className="px-4 py-3">วันที่</th>
+                    <th className="px-4 py-3 text-right">ยอดรวม</th>
+                    <th className="px-4 py-3 text-center">สถานะ</th>
+                </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+                {orders.length > 0 ? (
+                    orders.map((o, index) => (
+                        <tr key={o.id} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-4 py-3 text-gray-500">#{index + 1}</td>
+                            <td className="px-4 py-3">
+                                <div className="font-semibold text-gray-800">{o.orderedBy?.email || 'N/A'}</div>
+                                {/* แสดงที่อยู่ Snapshot แบบย่อ */}
+                                <div className="text-xs text-gray-500 flex items-center gap-1 mt-1 max-w-[200px] truncate" title={o.shippingAddress}>
+                                    <MapPin size={12} />
+                                    {o.shippingAddress || 'ไม่ระบุที่อยู่'}
+                                </div>
+                            </td>
+                            <td className="px-4 py-3 text-gray-500 whitespace-nowrap">{formatDate(o.createdAt)}</td>
+                            <td className="px-4 py-3 text-right font-medium text-blue-600">
+                                {numberFormat(o.cartTotal)}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                                <span className={`px-2 py-1 rounded-full text-xs font-semibold border 
+                                    ${o.orderStatus === 'Completed' ? 'bg-green-100 text-green-700 border-green-200' : 
+                                      o.orderStatus === 'Cancelled' ? 'bg-red-100 text-red-700 border-red-200' : 
+                                      'bg-blue-100 text-blue-700 border-blue-200'}`}>
+                                    {o.orderStatus}
+                                </span>
+                            </td>
+                        </tr>
+                    ))
+                ) : (
+                    <tr><td colSpan="5" className="p-4 text-center text-gray-400">ไม่มีข้อมูลล่าสุด</td></tr>
+                )}
+            </tbody>
+        </table>
+      </div>
     </div>
   );
 };
 
 export default RecentOrders;
-// ======= End Fix =======

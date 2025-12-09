@@ -1,15 +1,17 @@
 const prisma = require("../config/prisma")
 
+// ================= ADMIN : Manage Users =================
 exports.listUsers = async (req,res) => {
     try{
-        //code
         const users = await prisma.user.findMany({
             select:{
                 id:true,
                 email:true,
                 role:true,
                 enable:true,
-                address:true
+                // address:true, // ❌ ลบออก เพราะไม่มี field นี้แล้วในตาราง User
+                addresses: true, // ✅ เพิ่มอันนี้แทน เพื่อดูรายการที่อยู่ (Relation)
+                updatedAt: true
             }
         })
         res.send(users)
@@ -19,16 +21,15 @@ exports.listUsers = async (req,res) => {
         res.status(500).json({ message: "listUsers Error"})
     }
 }
+
 exports.changeStatus = async (req,res) => {
     try{
-        //code
         const { id,enable } = req.body
         console.log(id,enable)
         const user = await prisma.user.update({
             where:{ id:Number(id)},
             data:{ enable: enable }
         })
-
 
         res.send('Update Status success')
 
@@ -37,43 +38,37 @@ exports.changeStatus = async (req,res) => {
         res.status(500).json({ message: "changeStatus Error"})
     }
 }
+
 exports.changeRole = async (req,res) => {
     try{
-        //code
         const { id,role } = req.body
    
         const user = await prisma.user.update({
             where:{ id:Number(id)},
             data:{ role: role }
         })
-        res.send('Updete Role Success')
+        res.send('Update Role Success')
 
     } catch (err) {
         console.log(err)
         res.status(500).json({ message: "changeRole Error"})
     }
 }
+
+// ================= USER : Cart System =================
 exports.userCart = async (req, res) => {
     try {
-      //code
       const { cart } = req.body;
-      console.log(cart);
-      console.log(req.user.id);
-  
       const user = await prisma.user.findFirst({
         where: { id: Number(req.user.id) },
       });
-      // console.log(user)
   
       // Check quantity
       for (const item of cart) {
-        // console.log(item)
         const product = await prisma.product.findUnique({
           where: { id: item.id },
           select: { quantity: true, title: true },
         });
-        // console.log(item)
-        // console.log(product)
         if (!product || item.count > product.quantity) {
           return res.status(400).json({
             ok: false,
@@ -124,11 +119,10 @@ exports.userCart = async (req, res) => {
       console.log(err);
       res.status(500).json({ message: "Server Error" });
     }
-  };
+};
+
 exports.getUserCart = async (req,res) => {
     try{
-        //code
-        // req.suer.id ผ่าน Middle ทุกๆหน้า ไม่ผ่าน middle จะใช้ตัวแปลไม่ได้
         const cart  = await prisma.cart.findFirst({
             where:{
                 orderedById: Number(req.user.id)
@@ -152,16 +146,16 @@ exports.getUserCart = async (req,res) => {
         res.status(500).json({ message: "getUserCart Error"})
     }
 }
+
 exports.emptyCart = async (req,res) => {
     try{
-        //code
         const cart = await prisma.cart.findFirst({
             where: { orderedById: Number(req.user.id)}
         })
         if(!cart){
             return res.status(400).json({ message : 'No Cart'})
         }
-        await prisma.prouctOnCart.deleteMany({
+        await prisma.productOnCart.deleteMany({
             where: { cartId: cart.id}
         })
         const result = await prisma.cart.deleteMany({
@@ -179,39 +173,138 @@ exports.emptyCart = async (req,res) => {
         res.status(500).json({ message: "emptyCart Error"})
     }
 }
+
+// ================= USER : Address System (NEW) =================
+
+// 1. เพิ่มที่อยู่ใหม่ (Create)
 exports.saveAddress = async (req,res) => {
     try{
-        //code
-        const { address } = req.body
-        console.log(address)
-        const addressUser = await prisma.user.update({
-            where:{
-                id: Number(req.user.id)
-            },
+        const { addrDetail, province, district, subDistrict, zipcode, recipient, phone, isMain } = req.body
+        
+        // ถ้า User เลือกเป็นที่อยู่หลัก -> ให้ไปเคลียร์ที่อยู่อื่นๆ ให้เป็น false ก่อน
+        if (isMain) {
+            await prisma.address.updateMany({
+                where: { userId: req.user.id },
+                data: { isMain: false }
+            });
+        }
+
+        const address = await prisma.address.create({
             data:{
-                address: address
+                addrDetail,
+                province,
+                district,
+                subDistrict,
+                zipcode,
+                recipient,
+                phone,
+                isMain: isMain || false,
+                userId: req.user.id
             }
         })
-        res.json({
-            Success : true ,
-            message : "Address Update Success"
-        })
+
+        res.json({ ok: true, message: "Address created success" })
 
     } catch (err) {
         console.log(err)
         res.status(500).json({ message: "saveAddress Error"})
     }
 }
+
+// 2. ดึงรายการที่อยู่ (Read)
+exports.getAddresses = async (req, res) => {
+    try {
+        const addresses = await prisma.address.findMany({
+            where: { userId: req.user.id },
+            orderBy: { createdAt: 'desc' }
+        });
+        res.json(addresses);
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ message: "Server Error" });
+    }
+};
+
+// 3. แก้ไขที่อยู่ (Update)
+exports.updateAddress = async (req, res) => {
+    try {
+        const { addressId, isMain, ...otherData } = req.body;
+        
+        // ถ้าจะตั้งเป็น Main ให้เคลียร์อันอื่นก่อน
+        if (isMain) {
+            await prisma.address.updateMany({
+                where: { userId: req.user.id },
+                data: { isMain: false }
+            });
+        }
+
+        const address = await prisma.address.update({
+            where: { 
+                id: Number(addressId),
+                userId: req.user.id 
+            },
+            data: {
+                ...otherData,
+                isMain: isMain
+            }
+        });
+
+        res.json({ ok: true, message: "Address updated success" });
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ message: "Server Error" });
+    }
+};
+
+// 4. ลบที่อยู่ (Delete)
+exports.deleteAddress = async (req, res) => {
+    try {
+        const { id } = req.params; // รับ id จาก params
+
+        await prisma.address.delete({
+            where: { 
+                id: Number(id),
+                userId: req.user.id // เช็คว่าเป็นของ User คนนี้จริงไหม
+            }
+        });
+
+        res.json({ ok: true, message: "Address deleted success" });
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ message: "Server Error" });
+    }
+};
+
+// ================= USER : Order System (UPDATED) =================
 exports.saveOrder = async (req, res) => {
- 
   try {
     const userId = req.user.id;
+    
+    // รับ addressId มาจากหน้าบ้าน (เปลี่ยนจากรับ address object มาเป็น ID)
+    const { addressId } = req.body; 
 
-    // ใช้ Transaction เพื่อความปลอดภัย (เช็คของ -> ตัดของ -> สร้างออเดอร์ -> ลบตะกร้า)
-    // ถ้าขั้นตอนไหนพัง ข้อมูลจะ Rollback กลับมาเหมือนเดิมทั้งหมด
+    // 1. ค้นหาที่อยู่เพื่อทำ Snapshot (สำคัญมาก)
+    const addressInfo = await prisma.address.findUnique({
+        where: { id: Number(addressId) }
+    });
+
+    if (!addressInfo) {
+        return res.status(400).json({ message: "ไม่พบที่อยู่จัดส่ง" });
+    }
+
+    // สร้าง String ที่อยู่สำหรับบันทึกถาวร
+    const shippingAddressText = `
+      ผู้รับ: ${addressInfo.recipient || 'ไม่ระบุ'} 
+      เบอร์โทร: ${addressInfo.phone || 'ไม่ระบุ'}
+      ที่อยู่: ${addressInfo.addrDetail} 
+      ตำบล/แขวง: ${addressInfo.subDistrict} 
+      อำเภอ/เขต: ${addressInfo.district} 
+      จังหวัด: ${addressInfo.province} 
+      รหัสไปรษณีย์: ${addressInfo.zipcode}
+    `.trim().replace(/\s+/g, ' ');
+
     const order = await prisma.$transaction(async (tx) => {
-      
-      // 1. ดึงข้อมูลตะกร้า
+      // 2. ดึงข้อมูลตะกร้า
       const cart = await tx.cart.findFirst({
         where: { orderedById: userId },
         include: { products: { include: { product: true } } },
@@ -221,21 +314,18 @@ exports.saveOrder = async (req, res) => {
         throw new Error("Cart is empty");
       }
 
-      // 2. (สำคัญ) เช็คสต็อก และ ตัดสต็อกสินค้าทีละรายการ
+      // 3. เช็คสต็อก และ ตัดสต็อกสินค้า
       for (const item of cart.products) {
-        // 2.1 ดึงสินค้าล่าสุดเพื่อเช็ค quantity
         const product = await tx.product.findUnique({
           where: { id: item.productId }
         });
 
-        // 2.2 เช็คว่ามีของพอไหม
         if (!product || item.count > product.quantity) {
           throw new Error(
             `ขออภัย สินค้า "${product?.title || 'Unknown'}" หมด หรือมีไม่พอ (เหลือ ${product?.quantity || 0} ชิ้น)`
           );
         }
 
-        // 2.3 ตัดสต็อก (ลด quantity, เพิ่ม sold)
         await tx.product.update({
           where: { id: item.productId },
           data: {
@@ -245,7 +335,7 @@ exports.saveOrder = async (req, res) => {
         });
       }
 
-      // 3. สร้าง Order
+      // 4. สร้าง Order (เพิ่ม shippingAddress)
       const newOrder = await tx.order.create({
         data: {
           orderedById: userId,
@@ -257,13 +347,16 @@ exports.saveOrder = async (req, res) => {
               price: item.price,
             })),
           },
-          orderStatus: "Not Process", // สถานะจัดส่ง
+          orderStatus: "Not Process",
           amount: cart.cartTotal,
-          status: "Paid",             // สถานะการเงิน
+          status: "Paid", // ถ้ายังไม่ได้จ่ายจริง อาจจะปรับเป็น "Pending" ได้
+          
+          // ✅ บันทึก Snapshot ที่อยู่
+          shippingAddress: shippingAddressText 
         },
       });
 
-      // 4. เคลียร์ Cart และ Items ใน Cart
+      // 5. เคลียร์ Cart
       await tx.productOnCart.deleteMany({ where: { cartId: cart.id } });
       await tx.cart.delete({ where: { id: cart.id } });
 
@@ -274,14 +367,13 @@ exports.saveOrder = async (req, res) => {
 
   } catch (err) {
     console.log(err);
-    // ถ้า Error เพราะสินค้าหมด ให้ส่งข้อความแจ้งเตือนกลับไป
     const message = err.message.includes("ขออภัย") ? err.message : "Order creation failed";
     res.status(500).json({ message: message });
   }
 };
+
 exports.getOrder = async (req,res) => {
   try{
-      // ดึง orders ของ user และ include product + orderedBy
       const orders = await prisma.order.findMany({
           where: {
               orderedById: Number(req.user.id)
@@ -294,7 +386,7 @@ exports.getOrder = async (req,res) => {
               },
               orderedBy: true
           },
-          orderBy: { createdAt: "desc" } // ใหม่สุดอยู่บน
+          orderBy: { createdAt: "desc" }
       });
 
       if (orders.length === 0){  

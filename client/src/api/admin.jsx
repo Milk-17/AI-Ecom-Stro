@@ -58,3 +58,11 @@ export const getOrderAdminStats = async (token) => {
     },
   });
 };
+
+export const getAdminLogs = async (token) => {
+  return await axios.get("http://localhost:5001/api/admin/logs", {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+};
