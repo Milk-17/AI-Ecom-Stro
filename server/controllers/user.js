@@ -351,7 +351,7 @@ exports.saveOrder = async (req, res) => {
           amount: cart.cartTotal,
           status: "Paid", // ถ้ายังไม่ได้จ่ายจริง อาจจะปรับเป็น "Pending" ได้
           
-          // ✅ บันทึก Snapshot ที่อยู่
+          //  บันทึก Snapshot ที่อยู่
           shippingAddress: shippingAddressText 
         },
       });
@@ -400,3 +400,32 @@ exports.getOrder = async (req,res) => {
       res.status(500).json({ message: "getOrder Error" });
   }
 }
+
+// ================= USER : Update Profile (Simple Version) =================
+exports.updateProfile = async (req, res) => {
+  try {
+    // ต้องรับ picture เข้ามาด้วย
+    const { name, picture } = req.body; 
+    
+    // อัปเดตข้อมูล
+    const user = await prisma.user.update({
+      where: { id: req.user.id },
+      data: { 
+        name: name,
+        picture: picture // ✅ บันทึกลง DB
+      }
+    });
+
+    // ส่งข้อมูลกลับ (ตัด password ออก)
+    const { password, ...userData } = user;
+    
+    res.json({
+      message: "Update Profile Success",
+      user: userData
+    });
+
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ message: "Server Error Update Profile" });
+  }
+};  

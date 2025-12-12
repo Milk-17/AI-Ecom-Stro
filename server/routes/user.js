@@ -13,7 +13,9 @@ const {
     updateAddress,    //  เพิ่ม
     deleteAddress,    //  เพิ่ม
     saveOrder,
-    getOrder 
+    getOrder ,
+    updateProfile
+    
 } = require('../controllers/user')
 
 // Admin
@@ -31,6 +33,7 @@ router.post('/user/address', authCheck, saveAddress);      // สร้างท
 router.get('/user/address', authCheck, getAddresses);      // ดูรายการที่อยู่
 router.put('/user/address', authCheck, updateAddress);     // แก้ไขที่อยู่
 router.delete('/user/address/:id', authCheck, deleteAddress); // ลบที่อยู่
+router.put('/user/update-profile', authCheck, updateProfile);  // อัปเดตโปรไฟล์ผู้ใช้
 
 // User Order
 router.post('/user/order',authCheck,saveOrder);

@@ -31,6 +31,7 @@ model User {
   resetTokenExpire DateTime? // หมดอายุ
   adminLogs        AdminLog[]
   priceHistories   ProductPriceHistory[] // ความสัมพันธ์กับ ProductPriceHistory
+  
 } 
 
 model Address {
@@ -64,9 +65,9 @@ model Product {
   sold        Int              @default(0)
   quantity    Int
   orderItems  ProductOnOrder[]
-  cartItems   ProductOnCart[]
-  images      Image[]
-  createdAt   DateTime         @default(now())
+  carges      Image[]
+  cretItems   ProductOnCart[]
+  imaatedAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
   // Relation กับ SubCategory

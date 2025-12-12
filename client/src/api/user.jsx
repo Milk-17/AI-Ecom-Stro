@@ -49,3 +49,28 @@ export const getOrders = async (token) => {
       headers: { Authorization: `Bearer ${token}` },
     });
 };
+
+//  อัปเดตโปรไฟล์
+export const updateUserProfile = async (token, value) => {
+    return await axios.put(
+      "http://localhost:5001/api/user/update-profile", // เช็ค Port ให้ตรงกับ Server คุณ
+      value,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+  };
+
+  export const changePassword = async (token, form) => {
+    return await axios.put(
+      "http://localhost:5001/api/user/change-password", 
+      form, 
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+  };

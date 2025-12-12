@@ -77,7 +77,10 @@ exports.login = async(req,res) => {
         const payload = {
             id : user.id,
             email : user.email,
-            role : user.role
+            role : user.role,
+            name: user.name, //  เพิ่มบรรทัดนี้ครับ! เพื่อส่งชื่อไปด้วย
+            picture: user.picture //  (แนะนำ) เพิ่มรูปไปด้วยเลย จะได้ไม่ต้องรอโหลด
+
         } 
         // 4 Generate Token //.env
         jwt.sign(payload,process.env.SECRET,{expiresIn : '1d'},   
@@ -107,6 +110,7 @@ exports.currentUser = async (req,res) => {
                 email:true,
                 name:true,
                 role:true, 
+                picture: true
             }
         });
         res.json({ user });
@@ -239,5 +243,61 @@ exports.forgotPassword = async (req, res) => {
     } catch (err) {
       console.log(err);
       res.status(500).json({ message: "Server Error" });
+    }
+  };
+
+  exports.changePassword = async (req, res) => {
+    try {
+      const { currentPassword, newPassword } = req.body;
+      const userId = req.user.id; 
+      
+      // 🔍 1. Debug: ปริ้นดูว่าหน้าบ้านส่งอะไรมา (ลบออกได้หลังแก้เสร็จ)
+      console.log("Change Password Request:", { 
+          userId, 
+          currentPasswordReceived: currentPassword, 
+          newPasswordReceived: newPassword 
+      });
+  
+      const user = await prisma.user.findUnique({
+        where: { id: userId }
+      });
+  
+      if (!user) {
+          return res.status(400).json({ message: "User not found" });
+      }
+  
+      // 🔒 2. Security Check: เพิ่มกฎความปลอดภัยรหัสผ่านใหม่
+      // ต้องมี: ตัวเล็ก, ตัวใหญ่, ตัวเลข, อักขระพิเศษ, ยาว 8 ตัวขึ้นไป
+      const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*])(?=.{8,})/;
+      
+      if (!passwordRegex.test(newPassword)) {
+          return res.status(400).json({ 
+              message: "รหัสผ่านต้องมีอย่างน้อย 8 ตัว, อักษรใหญ่, เล็ก, ตัวเลข และอักขระพิเศษ (!@#$%^&*)" 
+          });
+      }
+  
+      // 3. เช็ครหัสเก่า
+      const isMatch = await bcrypt.compare(currentPassword, user.password);
+      
+      if (!isMatch) {
+        // ถ้า Error ตรงนี้ ให้ดูที่ Console ว่า currentPasswordReceived ตรงกับที่คุณพิมพ์ไหม
+        return res.status(400).json({ message: "รหัสผ่านเดิมไม่ถูกต้อง" });
+      }
+  
+      // 4. Hash และบันทึก
+      const hashNewPassword = await bcrypt.hash(newPassword, 10);
+  
+      await prisma.user.update({
+        where: { id: userId },
+        data: {
+          password: hashNewPassword
+        }
+      });
+  
+      res.json({ message: "เปลี่ยนรหัสผ่านสำเร็จ" });
+  
+    } catch (err) {
+      console.log(err);
+      res.status(500).json({ message: "Server Error Change Password" });
     }
   };

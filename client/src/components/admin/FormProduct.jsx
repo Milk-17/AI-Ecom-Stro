@@ -243,10 +243,12 @@ const FormProduct = () => {
                             <td className="p-3 text-center align-middle text-xs whitespace-nowrap">{formatDate(item.updatedAt)}</td>
                             <td className="p-3 text-center align-middle">
                                 <div className="flex justify-center gap-2">
-                                    <Link to={`/admin/product/${item.id}`} className="bg-yellow-100 text-yellow-600 p-2 rounded-md hover:bg-yellow-200 transition shadow-sm border border-yellow-200" title="แก้ไข">
+                                    <Link to={`/admin/product/${item.id}`} className="bg-yellow-100 text-yellow-600 p-2 rounded-md hover:bg-yellow-200 transition shadow-sm border border-yellow-200" 
+                                    title="แก้ไข">
                                         <PencilOff size={16} />
                                     </Link>
-                                    <button className="bg-red-100 text-red-600 p-2 rounded-md hover:bg-red-200 transition shadow-sm border border-red-200" onClick={() => handleDelete(item.id)} title="ลบ">
+                                    <button className="bg-red-100 text-red-600 p-2 rounded-md hover:bg-red-200 transition shadow-sm border border-red-200" 
+                                    onClick={() => handleDelete(item.id)} title="ลบ">
                                         <Delete size={16} />
                                     </button>
                                 </div>

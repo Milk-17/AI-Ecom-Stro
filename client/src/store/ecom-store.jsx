@@ -45,6 +45,13 @@ const ecomStore = (set, get) => ({
       ),
     }));
   },
+
+  actionUpdateUser: (userData) => {
+    set((state) => ({
+      user: { ...state.user, ...userData } // เอาข้อมูลใหม่ (ชื่อ, รูป) ไปทับข้อมูลเก่า
+    }));
+  },
+  
   actionRemoveProduct: (productId) => {
     // console.log('remove jaaaaa', productId)
     set((state) => ({
