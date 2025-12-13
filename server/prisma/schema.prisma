@@ -187,4 +187,5 @@ model AdminLog {
 
   admin   User     @relation(fields: [adminId], references: [id])
   product Product? @relation("ProductAdminLogs", fields: [productId], references: [id])
+  888
 }
