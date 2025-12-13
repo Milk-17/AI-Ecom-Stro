@@ -58,6 +58,14 @@ const ecomStore = (set, get) => ({
       carts: state.carts.filter((item) => item.id !== productId),
     }));
   },
+ 
+  actionDeleteProduct: (productId) => {
+    set((state) => ({
+      // ใช้ != (เท่ากับ 2 ตัว) เผื่อ ID เป็น string/number ไม่ตรงกัน
+      products: state.products.filter((item) => item.id != productId), 
+    }));
+  },
+
   getTotalPrice: () => {
     return get().carts.reduce((total, item) => {
       return total + item.price * item.count;

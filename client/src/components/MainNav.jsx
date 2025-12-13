@@ -8,9 +8,9 @@ function MainNav() {
   const carts = useEcomStore((s) => s.carts);
   const user = useEcomStore((s) => s.user);
   const logout = useEcomStore((s) => s.logout);
-  
+
   const [isOpen, setIsOpen] = useState(false);
-  const navigate = useNavigate(); // ใช้สำหรับ redirect ตอน logout
+  const navigate = useNavigate();
 
   const toggleDropdown = () => {
     setIsOpen(!isOpen);
@@ -19,7 +19,7 @@ function MainNav() {
   const handleLogout = () => {
     logout();
     setIsOpen(false);
-    navigate("/"); // logout แล้วกลับหน้าแรก
+    navigate("/");
   };
 
   return (
@@ -28,11 +28,7 @@ function MainNav() {
         <div className="flex justify-between h-16">
           <div className="flex items-center gap-6">
             <Link to={"/"}>
-              <img
-                src="/LOGO.png"
-                alt="Website Logo"
-                className="w-20 h-auto"
-              />
+              <img src="/LOGO.png" alt="Website Logo" className="w-20 h-auto" />
             </Link>
 
             <NavLink
@@ -78,39 +74,39 @@ function MainNav() {
             <div className="flex items-center gap-4 relative">
               <button
                 onClick={toggleDropdown}
-                className="flex items-center gap-2 hover:bg-gray-200 px-2 py-3 rounded-md transition duration-150"
+                className="flex items-center justify-between gap-3 hover:bg-gray-200 px-3 py-2 rounded-full border border-gray-100 transition duration-150 shadow-sm min-w-[160px]"
               >
-                {/* --- ส่วนแสดงรูปโปรไฟล์ (แก้ไขใหม่) --- */}
-                {user.picture ? (
-                  <img
-                    className="w-8 h-8 rounded-full object-cover border border-gray-200"
-                    src={user.picture} // ใช้รูปจาก Store ที่เราเลือกมา
-                    alt="Profile"
-                    onError={(e) => {
-                      e.target.onError = null;
-                      // รูปสำรองกรณีโหลดรูปจริงไม่ได้
-                      e.target.src = "https://cdn.iconscout.com/icon/free/png-512/free-avatar-icon-download-in-svg-png-gif-file-formats--user-professor-avatars-flat-icons-pack-people-456317.png?f=webp&w=256"; 
-                    }}
-                  />
-                ) : (
-                  // ถ้าไม่มีรูป ให้แสดง Icon
-                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 border border-blue-200">
-                    <User size={20} />
-                  </div>
-                )}
+                <div className="flex items-center gap-2">
+                  {/* ส่วนรูปภาพ */}
+                  {user.picture ? (
+                    <img
+                      className="w-9 h-9 rounded-full object-cover border border-gray-200"
+                      src={user.picture}
+                      alt="Profile"
+                      onError={(e) => {
+                        e.target.onError = null;
+                        e.target.src =
+                          "https://cdn.iconscout.com/icon/free/png-512/free-avatar-icon-download-in-svg-png-gif-file-formats--user-professor-avatars-flat-icons-pack-people-456317.png?f=webp&w=256";
+                      }}
+                    />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 border border-blue-200">
+                      <User size={20} />
+                    </div>
+                  )}
 
-                {/* --- ส่วนแสดงชื่อ (เพิ่มใหม่) --- */}
-                <span className="text-sm font-medium text-gray-700 hidden sm:block">
-                  {user.name || user.email}
-                </span>
+                  <span className="text-sm font-bold text-gray-700 truncate max-w-[120px]">
+                    {user.name || user.email}
+                  </span>
+                </div>
 
-                <ChevronDown size={16} />
+                <ChevronDown size={18} className="text-gray-500" />
               </button>
 
               {isOpen && (
                 <div className="absolute top-16 right-0 bg-white shadow-md z-50 w-48 rounded-md overflow-hidden border border-gray-100">
                   <Link
-                    to={"/user/profile"} // แก้ Link ให้ตรงกับ path ที่เราทำ (user/profile)
+                    to={"/user/profile"}
                     onClick={() => setIsOpen(false)}
                     className="block px-4 py-2 hover:bg-gray-200 border-b text-sm"
                   >
@@ -124,7 +120,7 @@ function MainNav() {
                   >
                     History
                   </Link>
-                  
+
                   <button
                     onClick={handleLogout}
                     className="block px-4 py-2 hover:bg-gray-200 w-full text-left text-sm text-red-600"
