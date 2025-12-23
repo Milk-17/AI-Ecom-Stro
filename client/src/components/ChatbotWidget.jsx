@@ -12,7 +12,7 @@ const ChatbotWidget = () => {
   // ใช้เก็บ Session ID
   const sessionIdRef = useRef("");
 
-  // ใช้สำหรับเลื่อน scroll ไปด้านล่างสุด
+  // ใช้สำหรับเลื่อน scroll ไปด้านล่างสุด แล้ว
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
